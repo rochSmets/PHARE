@@ -12,12 +12,75 @@
 #include "core/utilities/constants.h"
 #include "core/utilities/point/point.h"
 
+#include "SAMRAI/xfer/BoxGeometryVariableFillPattern.h"
+
 
 #include <map>
 #include <string>
+#include <memory>
 
 using namespace PHARE::core;
 using namespace PHARE::amr;
+
+
+/* When determining which DataFactory to use to create the correct geometry
+ *  Samrai compares existing items within the RefinerPool
+ *   See: SAMRAI::xfer::RefineClasses::getEquivalenceClassIndex"
+ *   If we do not specify a separate VariableFillPattern for each item sent to
+ *    Algo->registerRefine : we run the risk of all items only using the first registered
+ *    DataFactory, thus all items will receive the Geometry of that item.
+ *    We "hack" this as there is a typeid()== check on the variablefill pattern types
+ */
+
+class RhoVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+class PVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+
+
+class BXVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+class BYVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+class BZVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+
+class EXVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+class EYVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+class EZVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+
+class JXVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+class JYVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+class JZVariableFillPattern : public SAMRAI::xfer::BoxGeometryVariableFillPattern
+{
+};
+
+
 
 
 template<typename GridLayoutT, typename FieldT>
@@ -29,11 +92,57 @@ public:
         : dataToAllocate_{dataToAllocate}
         , refineOp_{refineOperator}
     {
-        for (auto const& nameToIds : dataToAllocate_)
+        auto registerRefine = [this](int id, auto& fillPattern) {
+            algorithm_.registerRefine(id, id, id, refineOp_, fillPattern);
+        };
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> BxVariableFillPattern
+            = std::make_shared<BXVariableFillPattern>();
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> ByVariableFillPattern
+            = std::make_shared<BYVariableFillPattern>();
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> BzVariableFillPattern
+            = std::make_shared<BZVariableFillPattern>();
+
+        registerRefine(dataToAllocate_["Bx"], BxVariableFillPattern);
+        registerRefine(dataToAllocate_["By"], ByVariableFillPattern);
+        registerRefine(dataToAllocate_["Bz"], BzVariableFillPattern);
+
+
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> ExVariableFillPattern
+            = std::make_shared<EXVariableFillPattern>();
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> EyVariableFillPattern
+            = std::make_shared<EYVariableFillPattern>();
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> EzVariableFillPattern
+            = std::make_shared<EZVariableFillPattern>();
+
+        registerRefine(dataToAllocate_["Ex"], ExVariableFillPattern);
+        registerRefine(dataToAllocate_["Ey"], EyVariableFillPattern);
+        registerRefine(dataToAllocate_["Ez"], EzVariableFillPattern);
+
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> JxVariableFillPattern
+            = std::make_shared<JXVariableFillPattern>();
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> JyVariableFillPattern
+            = std::make_shared<JYVariableFillPattern>();
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> JzVariableFillPattern
+            = std::make_shared<JZVariableFillPattern>();
+
+        registerRefine(dataToAllocate_["Jx"], JxVariableFillPattern);
+        registerRefine(dataToAllocate_["Jy"], JyVariableFillPattern);
+        registerRefine(dataToAllocate_["Jz"], JzVariableFillPattern);
+
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> rhoVariableFillPattern
+            = std::make_shared<RhoVariableFillPattern>();
+
+        std::shared_ptr<SAMRAI::xfer::VariableFillPattern> pVariableFillPattern
+            = std::make_shared<PVariableFillPattern>();
+
+        registerRefine(dataToAllocate_["Rho"], rhoVariableFillPattern);
+        registerRefine(dataToAllocate_["P"], pVariableFillPattern);
+
+        /*for (auto const& nameToIds : dataToAllocate_)
         {
-            algorithm_.registerRefine(nameToIds.second, nameToIds.second, nameToIds.second,
+            /*algorithm_.registerRefine(nameToIds.second, nameToIds.second, nameToIds.second,
                                       refineOp_);
-        }
+        }*/
     }
 
     virtual ~TagStrategy() = default;

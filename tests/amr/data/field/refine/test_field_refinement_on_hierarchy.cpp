@@ -100,8 +100,9 @@ TYPED_TEST(ALinearFieldRefineTest, ConserveLinearFunction)
                     for (std::uint32_t iy = gsi_Y; iy <= gei_Y; ++iy)
                     {
                         auto position = layout.fieldNodeCoordinates(field, layout.origin(), ix, iy);
-
-                        EXPECT_DOUBLE_EQ(field(ix, iy), affineFill(position));
+                        auto exp      = affineFill(position);
+                        auto act      = field(ix, iy);
+                        EXPECT_DOUBLE_EQ(act, exp);
                     }
                 }
             }

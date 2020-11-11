@@ -42,7 +42,7 @@ StandardTagAndInitialize
             tagging_method = "REFINE_BOXES"
             level_0
             {
-                boxes = [ (2, 2) , (16, 16)] , [ (32, 8), (48, 24)]
+                boxes = [ (10, 10) , (16, 16)]
             }
         }
     }
