@@ -130,8 +130,8 @@ def setOfModes():
 
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
-        time_step_nbr=1000,
-        final_time=1.,
+        time_step_nbr=10000,
+        final_time=10.,
 
         boundary_types="periodic",
 
@@ -146,7 +146,7 @@ def setOfModes():
 
 
     # list of modes : m = 1 is for 1 wavelength in the whole domain
-    modes = [1, 64]
+    modes = [4, 16]
 
     # lists of amplitudes of the magnetic field amplitudes
     b_amplitudes = [0.1, 0.1]
@@ -236,7 +236,7 @@ def setOfModes():
 
     sim = ph.global_vars.sim
 
-    timestamps = np.arange(0, sim.final_time+sim.time_step, 10*sim.time_step)
+    timestamps = np.arange(0, sim.final_time+sim.time_step, 40*sim.time_step)
 
 
     for quantity in ["E", "B"]:
@@ -263,6 +263,9 @@ def get_all_w(run_path, wave_numbers):
     file = os.path.join(run_path, "EM_B.h5")
     times = get_times_from_h5(file)
 
+    nm = len(wave_numbers)
+    print(nm)
+
     r = Run(run_path)
     byz = np.array([])
 
@@ -276,15 +279,35 @@ def get_all_w(run_path, wave_numbers):
         # x_fine = np.arange(x[0], x[-1], 0.05) # last arg : smallest grid size
         # by_fine = np.interp(x_fine, x, by)
         # bz_fine = np.interp(x_fine, x, bz)
-        time_sample = by-1j*bz
-        byz = np.stack((byz, time_sample))
+        time_sample = by+1j*bz
+        byz = np.concatenate((byz, time_sample))
 
+    nx = x.shape[0]
+    nt = times.shape[0]
     print(by.shape)
     print(byz.shape)
+    byz = np.reshape(byz, (times.shape[0], x.shape[0]))
+    #byz = np.reshape(byz, (x.shape[0], times.shape[0]))
+    print(byz.shape)
+
+    zob = np.absolute(np.fft.fft2(byz)[:(nt+1)//2, :(nx+1)//2])
+    #zob = np.absolute(np.fft.fft2(byz)[:(nx+1)//2, :(nt+1)//2])
+    print(zob.shape)
+    print(dir(zob))
+
+    idx = np.unravel_index(np.argmax(zob, axis=None), zob.shape)
+    print(idx, zob[idx])
 
 
 
-    return np.zeros_like(wave_numbers)
+    # xv, yv = np.meshgrid()
+    # idx=argsort(zob.flatten)
+    # idx.reshape(,)
+    # km = xv[idx[:n]], wm = yv[idx[:n]]
+
+
+
+    return np.zeros_like(wave_numbers), zob
 
 
 
@@ -297,9 +320,17 @@ def main():
     from pybindlibs.cpp import mpi_rank
 
     if mpi_rank() == 0:
-        omegas = get_all_w(os.path.join(os.curdir, "dispersion1d"), wave_nums)
+        omegas, zobi = get_all_w(os.path.join(os.curdir, "dispersion1d"), wave_nums)
 
         print(*('k = {:.4f}   w = {:.4f}   v = {:.4f}   b = {:.4f}'.format(k, w, v, b) for (k, w, v, b) in zip(wave_nums, omegas, v1, b1)), sep="\n")
+
+        fig, ax = plt.subplots(figsize=(6,4), nrows=1)
+
+        ax.imshow(zobi, origin='lower')
+
+        fig.tight_layout()
+        fig.savefig("dispersion.pdf", dpi=200)
+
 
         assert(1 == 1)
 
