@@ -8,6 +8,10 @@ from pyphare.pharein import ElectronModel
 from pyphare.simulator.simulator import Simulator
 from pyphare.pharein import global_vars as gv
 
+from pyphare.pharesee.hierarchy import finest_field
+import os
+from pyphare.pharesee.run import Run
+from pyphare.pharesee.hierarchy import get_times_from_h5
 
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -126,7 +130,7 @@ def setOfModes():
 
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
-        time_step_nbr=100,
+        time_step_nbr=1000,
         final_time=1.,
 
         boundary_types="periodic",
@@ -136,7 +140,7 @@ def setOfModes():
         cells=250,
         dl=0.2,
         diag_options={"format": "phareh5",
-                      "options": {"dir": "dispersion",
+                      "options": {"dir": "dispersion1d",
                                   "mode":"overwrite"}}
     )
 
@@ -159,11 +163,9 @@ def setOfModes():
     from pyphare.pharein.global_vars import sim
     L = sim.simulation_domain()[0]
     wave_numbers = [2*np.pi*m/L for m in modes]
-    print("wave_numbers : ", wave_numbers)
 
     # using faraday : v1 = -w b1 / (k . B0)
     v_amplitudes = [-b*omega(k, p)/k for (k, b, p) in zip(wave_numbers, b_amplitudes, polarizations)]
-    print("v_amplitudes", v_amplitudes)
 
 
     def density(x):
@@ -234,7 +236,7 @@ def setOfModes():
 
     sim = ph.global_vars.sim
 
-    timestamps = np.arange(0, sim.final_time +sim.time_step, sim.time_step)
+    timestamps = np.arange(0, sim.final_time+sim.time_step, 10*sim.time_step)
 
 
     for quantity in ["E", "B"]:
@@ -252,14 +254,55 @@ def setOfModes():
             compute_timestamps=timestamps,
             )
 
+    return wave_numbers, v_amplitudes, b_amplitudes
+
+
+
+# ___ post-processing functions
+def get_all_w(run_path, wave_numbers):
+    file = os.path.join(run_path, "EM_B.h5")
+    times = get_times_from_h5(file)
+
+    r = Run(run_path)
+    byz = np.array([])
+
+    print(times.shape)
+    for time in times:
+        #print("time : ", time)
+        B = r.GetB(time)
+        by, x = finest_field(B, "By")
+        bz, x = finest_field(B, "Bz")
+
+        # x_fine = np.arange(x[0], x[-1], 0.05) # last arg : smallest grid size
+        # by_fine = np.interp(x_fine, x, by)
+        # bz_fine = np.interp(x_fine, x, bz)
+        time_sample = by-1j*bz
+        byz = np.stack((byz, time_sample))
+
+    print(by.shape)
+    print(byz.shape)
+
+
+
+    return np.zeros_like(wave_numbers)
 
 
 
 def main():
-    setOfModes()
+    wave_nums, v1, b1 = setOfModes()
     simulator = Simulator(gv.sim)
     simulator.initialize()
     simulator.run()
+
+    from pybindlibs.cpp import mpi_rank
+
+    if mpi_rank() == 0:
+        omegas = get_all_w(os.path.join(os.curdir, "dispersion1d"), wave_nums)
+
+        print(*('k = {:.4f}   w = {:.4f}   v = {:.4f}   b = {:.4f}'.format(k, w, v, b) for (k, w, v, b) in zip(wave_nums, omegas, v1, b1)), sep="\n")
+
+        assert(1 == 1)
+
 
 if __name__=="__main__":
     main()
