@@ -17,10 +17,121 @@ mpl.use('Agg')
 
 
 
+def fromNoise():
+
+    # in this configuration there are no prescribed waves
+    # and only eigen modes existing in the simulation noise
+    # will be visible
+
+    Simulation(
+        smallest_patch_size=20,
+        largest_patch_size=20,
+
+        # the following time step number
+        # and final time mean that the
+        # smallest frequency will be 2/100
+        # and the largest 2/dt  = 2e3
+        time_step_nbr=100000,
+        final_time=100.,
+
+        boundary_types="periodic",
+
+        # smallest wavelength will be 2*0.2=0.4
+        # and largest 50
+        cells=500,
+        dl=0.2,
+        diag_options={"format": "phareh5",
+                      "options": {"dir": "dispersion",
+                                  "mode":"overwrite"}}
+    )
+
+    def density(x):
+        return 1.
+
+
+    def by(x):
+        return 0.
+
+
+    def bz(x):
+        return 0.
+
+
+    def bx(x):
+        return 1.
+
+
+    def vx(x):
+        return 0.
+
+
+    def vy(x):
+        return 0.
+
+    def vz(x):
+        return 0.
+
+
+    def vthx(x):
+        return 0.01
+
+
+    def vthy(x):
+        return 0.01
+
+
+    def vthz(x):
+        return 0.01
+
+
+    vvv = {
+        "vbulkx": vx, "vbulky": vy, "vbulkz": vz,
+        "vthx": vthx, "vthy": vthy, "vthz": vthz
+    }
+
+    MaxwellianFluidModel(
+        bx=bx, by=by, bz=bz,
+        protons={"charge": 1, "density": density, **vvv}
+    )
+
+    ElectronModel(closure="isothermal", Te=0.)
+
+
+    sim = ph.global_vars.sim
+
+    timestamps = np.arange(0, sim.final_time +sim.time_step, sim.time_step)
+
+    for quantity in ["E", "B"]:
+        ElectromagDiagnostics(
+            quantity=quantity,
+            write_timestamps=timestamps,
+            compute_timestamps=timestamps,
+        )
+
+
+
+
+def W_leftMode(k):
+    k2 = k*k
+    return 0.5*k2*(np.sqrt(1+4/k2)-1)
+
+def W_rightMode(k):
+    k2 = k*k
+    return 0.5*k2*(np.sqrt(1+4/k2)+1)
+
+
+
+
 def setOfModes():
 
+    # lists of k and b1 values for the set of modes
     wave_numbers = [0.125, 8.0] # 8, 4, 2, 1, 0.5, 0.25, 0.125
     b_amplitudes = [0.1  , 0.1]
+
+    assert(len(wave_numbers) == len(b_amplitudes))
+
+    # using faraday : v1 = -w b1 / (k . B0)
+    v_amplitudes = [-b*W_rightMode(k)/k for (k, b) in zip(wave_number, b_amplitudes)]
 
     Simulation(
         smallest_patch_size=20,
@@ -29,7 +140,6 @@ def setOfModes():
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
         time_step_nbr=100,
-        #time_step_nbr=100000,
         final_time=100.,
 
         boundary_types="periodic",
@@ -99,7 +209,7 @@ def setOfModes():
 
     MaxwellianFluidModel(
         bx=bx, by=by, bz=bz,
-        protons={"charge": 1, "density": density, **vvv}
+        main={"charge": 1, "density": density, **vvv}
     )
 
     ElectronModel(closure="isothermal", Te=0.)
