@@ -111,27 +111,14 @@ def fromNoise():
 
 
 
-def W_leftMode(k):
+def omega(k, p):
     k2 = k*k
-    return 0.5*k2*(np.sqrt(1+4/k2)-1)
-
-def W_rightMode(k):
-    k2 = k*k
-    return 0.5*k2*(np.sqrt(1+4/k2)+1)
+    return 0.5*k2*(np.sqrt(1+4/k2)+p)
 
 
 
 
 def setOfModes():
-
-    # lists of k and b1 values for the set of modes
-    wave_numbers = [0.125, 8.0] # 8, 4, 2, 1, 0.5, 0.25, 0.125
-    b_amplitudes = [0.1  , 0.1]
-
-    assert(len(wave_numbers) == len(b_amplitudes))
-
-    # using faraday : v1 = -w b1 / (k . B0)
-    v_amplitudes = [-b*W_rightMode(k)/k for (k, b) in zip(wave_number, b_amplitudes)]
 
     Simulation(
         smallest_patch_size=20,
@@ -140,7 +127,7 @@ def setOfModes():
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
         time_step_nbr=100,
-        final_time=100.,
+        final_time=1.,
 
         boundary_types="periodic",
 
@@ -153,21 +140,49 @@ def setOfModes():
                                   "mode":"overwrite"}}
     )
 
+
+    # list of modes : m = 1 is for 1 wavelength in the whole domain
+    modes = [1, 64]
+
+    # lists of amplitudes of the magnetic field amplitudes
+    b_amplitudes = [0.1, 0.1]
+
+    # list of polarization : +1 for R mode and -1 for L mode
+    polarizations = [+1, +1]
+
+    # list of phase at origin for magnetic and velocity fluctuations
+    phases = [0 , 0]
+
+    assert(len(modes) == len(b_amplitudes) == len(polarizations) == len(phases))
+
+    # list of wave_numbers for the given box
+    from pyphare.pharein.global_vars import sim
+    L = sim.simulation_domain()[0]
+    wave_numbers = [2*np.pi*m/L for m in modes]
+    print("wave_numbers : ", wave_numbers)
+
+    # using faraday : v1 = -w b1 / (k . B0)
+    v_amplitudes = [-b*omega(k, p)/k for (k, b, p) in zip(wave_numbers, b_amplitudes, polarizations)]
+    print("v_amplitudes", v_amplitudes)
+
+
     def density(x):
         # no density fluctuations as whistler and AIC are not compressional
         return 1.
 
 
     def by(x):
-        from pyphare.pharein.global_vars import sim
-        L = sim.simulation_domain()
-        return 0.1*np.cos(2*np.pi*x/L[0])
+        modes = 0.0
+        for (k, b, f) in zip(wave_numbers, b_amplitudes, phases):
+            modes += b*np.cos(k*x+f)
+        return modes
 
 
     def bz(x):
-        from pyphare.pharein.global_vars import sim
-        L = sim.simulation_domain()
-        return -0.1*np.sin(2*np.pi*x/L[0])
+        modes = 0.0
+        for (k, b, f) in zip(wave_numbers, b_amplitudes, phases):
+            modes += b*np.sin(k*x+f)
+        return modes
 
 
     def bx(x):
@@ -179,14 +194,17 @@ def setOfModes():
 
 
     def vy(x):
-        from pyphare.pharein.global_vars import sim
-        L = sim.simulation_domain()
-        return 0.1*np.cos(2*np.pi*x/L[0])
+        modes = 0.0
+        for (k, v, f) in zip(wave_numbers, v_amplitudes, phases):
+            modes += v*np.cos(k*x+f)
+        return modes
+
 
     def vz(x):
-        from pyphare.pharein.global_vars import sim
-        L = sim.simulation_domain()
-        return 0.1*np.sin(2*np.pi*x/L[0])
+        modes = 0.0
+        for (k, v, f) in zip(wave_numbers, b_amplitudes, phases):
+            modes += v*np.sin(k*x+f)
+        return modes
 
 
     def vthx(x):
