@@ -130,14 +130,14 @@ def setOfModes():
 
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
-        time_step_nbr=10000,
-        final_time=10.,
+        time_step_nbr=20000,
+        final_time=20.,
 
         boundary_types="periodic",
 
         # smallest wavelength is 0.8 = 4 grid pts
         # largest wavelength is 50 = the whole domain (250 pts)
-        cells=250,
+        cells=500,
         dl=0.2,
         diag_options={"format": "phareh5",
                       "options": {"dir": "dispersion1d",
@@ -146,16 +146,16 @@ def setOfModes():
 
 
     # list of modes : m = 1 is for 1 wavelength in the whole domain
-    modes = [4, 16]
+    modes = [4, 8, 16, 32, 64]
 
     # lists of amplitudes of the magnetic field amplitudes
-    b_amplitudes = [0.1, 0.1]
+    b_amplitudes = [0.1, 0.1, 0.1, 0.1, 0.2]
 
     # list of polarization : +1 for R mode and -1 for L mode
-    polarizations = [+1, +1]
+    polarizations = [+1, +1, +1, +1, +1]
 
     # list of phase at origin for magnetic and velocity fluctuations
-    phases = [0 , 0]
+    phases = [0 , 0, 0, 0, 0]
 
     assert(len(modes) == len(b_amplitudes) == len(polarizations) == len(phases))
 
@@ -199,14 +199,16 @@ def setOfModes():
         modes = 0.0
         for (k, v, f) in zip(wave_numbers, v_amplitudes, phases):
             modes += v*np.cos(k*x+f)
-        return modes
+        #return modes
+        return 0.0
 
 
     def vz(x):
         modes = 0.0
         for (k, v, f) in zip(wave_numbers, b_amplitudes, phases):
             modes += v*np.sin(k*x+f)
-        return modes
+        #return modes
+        return 0.0
 
 
     def vthx(x):
@@ -326,7 +328,7 @@ def main():
 
         fig, ax = plt.subplots(figsize=(6,4), nrows=1)
 
-        ax.imshow(zobi, origin='lower')
+        ax.imshow(zobi, origin='lower', cmap='viridis_r')
 
         fig.tight_layout()
         fig.savefig("dispersion.pdf", dpi=200)
