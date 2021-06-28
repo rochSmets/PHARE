@@ -45,29 +45,24 @@ def fromNoise():
         cells=500,
         dl=0.2,
         diag_options={"format": "phareh5",
-                      "options": {"dir": "dispersion",
+                      "options": {"dir": "fromNoise1d",
                                   "mode":"overwrite"}}
     )
 
     def density(x):
         return 1.
 
-
     def by(x):
         return 0.
-
 
     def bz(x):
         return 0.
 
-
     def bx(x):
         return 1.
 
-
     def vx(x):
         return 0.
-
 
     def vy(x):
         return 0.
@@ -75,14 +70,11 @@ def fromNoise():
     def vz(x):
         return 0.
 
-
     def vthx(x):
         return 0.01
 
-
     def vthy(x):
         return 0.01
-
 
     def vthz(x):
         return 0.01
@@ -122,7 +114,7 @@ def omega(k, p):
 
 
 
-def setOfModes():
+def setOfModes(polarization, modes, b_amplitudes):
 
     Simulation(
         smallest_patch_size=20,
@@ -130,34 +122,21 @@ def setOfModes():
 
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
-        time_step_nbr=20000,
-        final_time=20.,
+        time_step_nbr=80000,
+        final_time=80.,
 
         boundary_types="periodic",
 
         # smallest wavelength is 0.8 = 4 grid pts
         # largest wavelength is 50 = the whole domain (250 pts)
-        cells=500,
+        cells=2000,
         dl=0.2,
         diag_options={"format": "phareh5",
-                      "options": {"dir": "dispersion1d",
+                      "options": {"dir": "setOfModes1d",
                                   "mode":"overwrite"}}
     )
 
-
-    # list of modes : m = 1 is for 1 wavelength in the whole domain
-    modes = [4, 8, 16, 32, 64]
-
-    # lists of amplitudes of the magnetic field amplitudes
-    b_amplitudes = [0.1, 0.1, 0.1, 0.1, 0.2]
-
-    # list of polarization : +1 for R mode and -1 for L mode
-    polarizations = [+1, +1, +1, +1, +1]
-
-    # list of phase at origin for magnetic and velocity fluctuations
-    phases = [0 , 0, 0, 0, 0]
-
-    assert(len(modes) == len(b_amplitudes) == len(polarizations) == len(phases))
+    assert(len(modes) == len(b_amplitudes))
 
     # list of wave_numbers for the given box
     from pyphare.pharein.global_vars import sim
@@ -165,59 +144,50 @@ def setOfModes():
     wave_numbers = [2*np.pi*m/L for m in modes]
 
     # using faraday : v1 = -w b1 / (k . B0)
-    v_amplitudes = [-b*omega(k, p)/k for (k, b, p) in zip(wave_numbers, b_amplitudes, polarizations)]
+    #v_amplitudes = [-b*omega(k, p)/k for (k, b, p) in zip(wave_numbers, b_amplitudes, polarizations)]
 
 
     def density(x):
         # no density fluctuations as whistler and AIC are not compressional
         return 1.
 
-
     def by(x):
         modes = 0.0
-        for (k, b, f) in zip(wave_numbers, b_amplitudes, phases):
-            modes += b*np.cos(k*x+f)
+        for (k, b) in zip(wave_numbers, b_amplitudes):
+            modes += b*np.cos(k*x)
         return modes
-
 
     def bz(x):
         modes = 0.0
-        for (k, b, f) in zip(wave_numbers, b_amplitudes, phases):
-            modes += b*np.sin(k*x+f)
+        for (k, b) in zip(wave_numbers, b_amplitudes):
+            modes += b*np.sin(k*x)*polarization
         return modes
-
 
     def bx(x):
         return 1.
 
-
     def vx(x):
         return 0.
 
-
     def vy(x):
-        modes = 0.0
-        for (k, v, f) in zip(wave_numbers, v_amplitudes, phases):
-            modes += v*np.cos(k*x+f)
+        #modes = 0.0
+        #for (k, v, f) in zip(wave_numbers, v_amplitudes, phases):
+        #    modes += v*np.cos(k*x+f)
         #return modes
         return 0.0
-
 
     def vz(x):
-        modes = 0.0
-        for (k, v, f) in zip(wave_numbers, b_amplitudes, phases):
-            modes += v*np.sin(k*x+f)
+        #modes = 0.0
+        #for (k, v, f) in zip(wave_numbers, b_amplitudes, phases):
+        #    modes += v*np.sin(k*x+f)
         #return modes
         return 0.0
-
 
     def vthx(x):
         return 0.01
 
-
     def vthy(x):
         return 0.01
-
 
     def vthz(x):
         return 0.01
@@ -256,79 +226,126 @@ def setOfModes():
             compute_timestamps=timestamps,
             )
 
-    return wave_numbers, v_amplitudes, b_amplitudes
+    return wave_numbers, b_amplitudes
 
 
 
 # ___ post-processing functions
-def get_all_w(run_path, wave_numbers):
+def get_all_w(run_path, wave_numbers, polarization):
     file = os.path.join(run_path, "EM_B.h5")
     times = get_times_from_h5(file)
 
     nm = len(wave_numbers)
-    print(nm)
+    print('number of modes : {}'.format(nm))
 
     r = Run(run_path)
     byz = np.array([])
 
-    print(times.shape)
     for time in times:
-        #print("time : ", time)
         B = r.GetB(time)
         by, x = finest_field(B, "By")
         bz, x = finest_field(B, "Bz")
 
-        # x_fine = np.arange(x[0], x[-1], 0.05) # last arg : smallest grid size
-        # by_fine = np.interp(x_fine, x, by)
-        # bz_fine = np.interp(x_fine, x, bz)
-        time_sample = by+1j*bz
-        byz = np.concatenate((byz, time_sample))
+        # polarization = +1 for R mode, -1 for L mode
+        byz = np.concatenate((byz, by+polarization*1j*bz))
 
     nx = x.shape[0]
     nt = times.shape[0]
-    print(by.shape)
-    print(byz.shape)
-    byz = np.reshape(byz, (times.shape[0], x.shape[0]))
-    #byz = np.reshape(byz, (x.shape[0], times.shape[0]))
-    print(byz.shape)
+    byz = np.reshape(byz, (nt, nx))
 
-    zob = np.absolute(np.fft.fft2(byz)[:(nt+1)//2, :(nx+1)//2])
-    #zob = np.absolute(np.fft.fft2(byz)[:(nx+1)//2, :(nt+1)//2])
-    print(zob.shape)
-    print(dir(zob))
+    BYZ = np.absolute(np.fft.fft2(byz)[:(nt+1)//2, :(nx+1)//2])
+    BYZ_4_all_W = np.sum(BYZ, axis=0)
 
-    idx = np.unravel_index(np.argmax(zob, axis=None), zob.shape)
-    print(idx, zob[idx])
+    idx = np.argsort(BYZ_4_all_W)
+    kmodes = idx[-nm:]
 
+    wmodes = []
+    for i in range(nm):
+        wmodes.append(np.argmax(BYZ[:,idx[-nm+i]]))
 
+    print(kmodes, wmodes)
 
-    # xv, yv = np.meshgrid()
-    # idx=argsort(zob.flatten)
-    # idx.reshape(,)
-    # km = xv[idx[:n]], wm = yv[idx[:n]]
-
-
-
-    return np.zeros_like(wave_numbers), zob
+    return kmodes, np.array(wmodes), BYZ
+    #return BYZ
 
 
 
 def main():
-    wave_nums, v1, b1 = setOfModes()
+    # list of modes : m = 1 is for 1 wavelength in the whole domain
+    modes = [4, 8, 16, 32, 64, 128, 256]
+
+    # lists of amplitudes of the magnetic field amplitudes
+    b_amplitudes = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+
+    # polarization : -1 for L mode
+    wave_nums, b1 = setOfModes(-1, modes, b_amplitudes)
     simulator = Simulator(gv.sim)
     simulator.initialize()
     simulator.run()
 
     from pybindlibs.cpp import mpi_rank
+    from matplotlib import rc
 
     if mpi_rank() == 0:
-        omegas, zobi = get_all_w(os.path.join(os.curdir, "dispersion1d"), wave_nums)
+        sim = ph.global_vars.sim
 
-        print(*('k = {:.4f}   w = {:.4f}   v = {:.4f}   b = {:.4f}'.format(k, w, v, b) for (k, w, v, b) in zip(wave_nums, omegas, v1, b1)), sep="\n")
+        L = sim.simulation_domain()[0]
+        T = sim.final_time
 
-        fig, ax = plt.subplots(figsize=(6,4), nrows=1)
+        #for the left mode
+        ki, wi, zobi = get_all_w(os.path.join(os.curdir, "setOfModes1d"), wave_nums, -1)
 
-        ax.imshow(zobi, origin='lower', cmap='viridis_r')
+        k_numL = 2*np.pi*ki/L
+        w_numL = 2*np.pi*wi/T
+        print(*('Left mode... k = {:.4f}   w = {:.4f}   b = {:.4f}'.format(k, w, b) for (k, w, b) in zip(k_numL, w_numL, b1)), sep="\n")
+
+    ph.global_vars.sim = None
+
+    # list of modes : m = 1 is for 1 wavelength in the whole domain
+    modes = [4, 8, 16, 32, 64, 128, 256]
+
+    # lists of amplitudes of the magnetic field amplitudes
+    b_amplitudes = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+
+    # polarization : +1 for R mode
+    wave_nums, b1 = setOfModes(+1, modes, b_amplitudes)
+    simulator = Simulator(gv.sim)
+    simulator.initialize()
+    simulator.run()
+
+    if mpi_rank() == 0:
+        #sim = ph.global_vars.sim
+
+        L = sim.simulation_domain()[0]
+        T = sim.final_time
+
+        #for the riht mode
+        ki, wi, zobi = get_all_w(os.path.join(os.curdir, "setOfModes1d"), wave_nums, +1)
+
+        k_numR = 2*np.pi*ki/L
+        w_numR = 2*np.pi*wi/T
+        print(*('Right mode... k = {:.4f}   w = {:.4f}   b = {:.4f}'.format(k, w, b) for (k, w, b) in zip(k_numR, w_numR, b1)), sep="\n")
+
+        rc('text', usetex = True)
+
+        fig, ax = plt.subplots(figsize=(4,3), nrows=1)
+
+        k_the = np.arange(0.04, 20, 0.001)
+        w_thR = omega(k_the, +1)
+        w_thL = omega(k_the, -1)
+
+        #ax.imshow(zobi, origin='lower', cmap='viridis_r')
+        ax.plot(k_the, w_thR, '-k')
+        ax.plot(k_the, w_thL, '-k')
+        ax.plot(k_numR, w_numR, 'b+', label='R mode', markersize=8)
+        ax.plot(k_numL, w_numL, 'rx', label='L mode', markersize=12)
+
+        ax.set_xscale('log')
+        ax.set_yscale('log')
+        ax.set_xlabel('$k c / \omega_p$')
+        ax.set_ylabel('$\omega / \Omega_p$')
+
+        ax.legend(loc='upper left', frameon=False)
 
         fig.tight_layout()
         fig.savefig("dispersion.pdf", dpi=200)
@@ -339,3 +356,4 @@ def main():
 
 if __name__=="__main__":
     main()
+
