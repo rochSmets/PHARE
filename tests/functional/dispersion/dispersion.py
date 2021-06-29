@@ -123,13 +123,13 @@ def setOfModes(polarization, modes, b_amplitudes):
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
         time_step_nbr=80000,
-        final_time=80.,
+        final_time=60.,
 
         boundary_types="periodic",
 
         # smallest wavelength is 0.8 = 4 grid pts
         # largest wavelength is 50 = the whole domain (250 pts)
-        cells=2000,
+        cells=4000,
         dl=0.2,
         diag_options={"format": "phareh5",
                       "options": {"dir": "setOfModes1d",
@@ -266,16 +266,15 @@ def get_all_w(run_path, wave_numbers, polarization):
     print(kmodes, wmodes)
 
     return kmodes, np.array(wmodes), BYZ
-    #return BYZ
 
 
 
 def main():
     # list of modes : m = 1 is for 1 wavelength in the whole domain
-    modes = [4, 8, 16, 32, 64, 128, 256]
+    modes = [2, 4, 8, 16, 32, 64, 128, 256]
 
     # lists of amplitudes of the magnetic field amplitudes
-    b_amplitudes = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    b_amplitudes = [0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04]
 
     # polarization : -1 for L mode
     wave_nums, b1 = setOfModes(-1, modes, b_amplitudes)
@@ -302,10 +301,10 @@ def main():
     ph.global_vars.sim = None
 
     # list of modes : m = 1 is for 1 wavelength in the whole domain
-    modes = [4, 8, 16, 32, 64, 128, 256]
+    modes = [2, 4, 8, 16, 32, 64, 128, 256]
 
     # lists of amplitudes of the magnetic field amplitudes
-    b_amplitudes = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
+    b_amplitudes = [0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04, 0.04]
 
     # polarization : +1 for R mode
     wave_nums, b1 = setOfModes(+1, modes, b_amplitudes)
@@ -350,6 +349,11 @@ def main():
         fig.tight_layout()
         fig.savefig("dispersion.pdf", dpi=200)
 
+        errorL = 100*np.fabs(w_numL-w_thL)/w_thL
+        errorR = 100*np.fabs(w_numR-w_thR)/w_thR
+
+        print('error L :', errorL)
+        print('error R :', errorR)
 
         assert(1 == 1)
 
