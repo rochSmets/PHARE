@@ -57,4 +57,30 @@ error R : [19.98479337 11.95561343  5.69802063  3.50926014  1.25262802  2.528532
 
 ### run E
 idem runD avec T=200 et 300000steps
+[ 16   4 512 256   8 128  64  32] [9, 2, 1672, 512, 4, 152, 52, 20]
+Right mode... k = 0.2513   w = 0.2827   b = 0.0050
+Right mode... k = 0.0628   w = 0.0628   b = 0.0050
+Right mode... k = 8.0425   w = 52.5274   b = 0.0050
+Right mode... k = 4.0212   w = 16.0850   b = 0.0050
+Right mode... k = 0.1257   w = 0.1257   b = 0.0050
+Right mode... k = 2.0106   w = 4.7752   b = 0.0050
+Right mode... k = 1.0053   w = 1.6336   b = 0.0050
+Right mode... k = 0.5027   w = 0.6283   b = 0.0050
+error Left ... k = 0.0628   w_the = 0.0609   w_num = 0.0628   err = 3.1909
+error Left ... k = 0.1257   w_the = 0.1180   w_num = 0.1257   err = 6.4804
+error Left ... k = 0.2513   w_the = 0.2217   w_num = 0.2199   err = 0.8163
+error Left ... k = 0.5027   w_the = 0.3920   w_num = 0.4084   err = 4.1972
+error Left ... k = 1.0053   w_the = 0.6198   w_num = 0.6283   err = 1.3674
+error Left ... k = 2.0106   w_the = 0.8297   w_num = 0.8168   err = 1.5541
+error Left ... k = 4.0212   w_the = 0.9448   w_num = 0.9111   err = 3.5707
+error Left ... k = 8.0425   w_the = 0.9850   w_num = 0.9739   err = 1.1275
+
+error Right... k = 0.0628   w_the = 0.0648   w_num = 0.0628   err = 3.0923
+error Right... k = 0.1257   w_the = 0.1338   w_num = 0.1257   err = 6.0860
+error Right... k = 0.2513   w_the = 0.2849   w_num = 0.2827   err = 0.7524
+error Right... k = 0.5027   w_the = 0.6446   w_num = 0.6283   err = 2.5285
+error Right... k = 1.0053   w_the = 1.6305   w_num = 1.6336   err = 0.1925
+error Right... k = 2.0106   w_the = 4.8723   w_num = 4.7752   err = 1.9924
+error Right... k = 4.0212   w_the = 17.1152   w_num = 16.0850   err = 6.0192
+error Right... k = 8.0425   w_the = 65.6664   w_num = 52.5274   err = 20.0087
 
