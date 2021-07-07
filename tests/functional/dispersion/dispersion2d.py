@@ -233,40 +233,52 @@ def get_all_w(run_path, wave_numbers, polarization, theta):
     print('number of modes : {}'.format(nm))
 
     r = Run(run_path)
-    byz = np.array([])
+    blz = np.array([])
 
     for time in times:
-        B = r.GetB(time)
-        by, x = finest_field(B, "By")
-        bz, x = finest_field(B, "Bz")
+        interp_bx, xy = r.GetB(time, merged=True, interp='bilinear')['Bx']
+        interp_by, xy = r.GetB(time, merged=True, interp='bilinear')['By']
+        interp_bz, xy = r.GetB(time, merged=True, interp='bilinear')['Bz']
+
+        # beware that theta has to be such that tan theta < L[1]/L[0]
+        X, Y = (xy[0], xy[0]*np.tan(theta))
+
+        # the 1d space sampling is then of size nx
+        # the (l, t) image will then be of size (nx, nt)
+        bx = interp_bx(X, Y)
+        by = interp_by(X, Y)
+        bz = interp_bz(X, Y)
+
+        # the "l" direction is then at +pi/2 from the theta, normal to B0
+        bl = by*np.cos(theta)-bx*np.sin(theta)
 
         # polarization = +1 for R mode, -1 for L mode
-        byz = np.concatenate((byz, by+polarization*1j*bz))
+        blz = np.concatenate((blz, bl+polarization*1j*bz))
 
     nx = x.shape[0]
     nt = times.shape[0]
-    byz = np.reshape(byz, (nt, nx))
+    blz = np.reshape(blz, (nt, nx))
 
-    BYZ = np.absolute(np.fft.fft2(byz)[:(nt+1)//2, :(nx+1)//2])
-    BYZ_4_all_W = np.sum(BYZ, axis=0)
+    BLZ = np.absolute(np.fft.fft2(byz)[:(nt+1)//2, :(nx+1)//2])
+    BLZ_4_all_W = np.sum(BLZ, axis=0)
 
-    idx = np.argsort(BYZ_4_all_W)
+    idx = np.argsort(BLZ_4_all_W)
     kmodes = idx[-nm:]
 
     wmodes = []
     for i in range(nm):
-        wmodes.append(np.argmax(BYZ[:,idx[-nm+i]]))
+        wmodes.append(np.argmax(BLZ[:,idx[-nm+i]]))
 
     print(kmodes, wmodes)
 
-    return kmodes, np.array(wmodes), BYZ
+    return kmodes, np.array(wmodes), BLZ
 
 
 
 def main():
 
     # angle of the oblique mode (in radians)
-    theta = 20*np.pi/180
+    theta = 20*np.pi/180 # tan theta = 0.364 < L[1]/L[0]
 
     # list of modes : m = 1 is for 1 wavelength in the whole domain
     modes = [4, 8, 16, 32, 64, 128, 256, 512]
