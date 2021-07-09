@@ -242,9 +242,15 @@ def get_all_w(run_path, wave_numbers, polarization):
     byz = np.array([])
 
     for time in times:
-        B = r.GetB(time)
-        by, x = finest_field(B, "By")
-        bz, x = finest_field(B, "Bz")
+
+        inter_by, x = r.GetB(time, merged=True, interp='nearest')['By']
+        inter_bz, x = r.GetB(time, merged=True, interp='nearest')['Bz']
+        by = interp_by(x)
+        bz = interp_bz(x)
+
+        ### B = r.GetB(time)
+        ### by, x = finest_field(B, "By")
+        ### bz, x = finest_field(B, "Bz")
 
         # polarization = +1 for R mode, -1 for L mode
         byz = np.concatenate((byz, by+polarization*1j*bz))

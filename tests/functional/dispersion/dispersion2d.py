@@ -122,14 +122,16 @@ def setOfModes(polarization, modes, b_amplitudes, theta):
 
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
-        time_step_nbr=30000,
-        final_time=20.,
+        ### time_step_nbr=30000,
+        ### final_time=20.,
+        time_step_nbr=30,
+        final_time=0.02,
 
         boundary_types="periodic",
 
         # smallest wavelength is 0.8 = 4 grid pts
         # largest wavelength is 50 = the whole domain (250 pts)
-        cells=(200, 100),
+        cells=(200, 20),
         dl=(0.2, 0.2),
         diag_options={"format": "phareh5",
                       "options": {"dir": "setOfModes2d",
@@ -240,7 +242,6 @@ def get_all_w(run_path, wave_numbers, polarization, theta):
         interp_by, xy = r.GetB(time, merged=True, interp='bilinear')['By']
         interp_bz, xy = r.GetB(time, merged=True, interp='bilinear')['Bz']
 
-        # beware that theta has to be such that tan theta < L[1]/L[0]
         X, Y = (xy[0], xy[0]*np.tan(theta))
 
         # the 1d space sampling is then of size nx
@@ -259,7 +260,7 @@ def get_all_w(run_path, wave_numbers, polarization, theta):
     nt = times.shape[0]
     blz = np.reshape(blz, (nt, nx))
 
-    BLZ = np.absolute(np.fft.fft2(byz)[:(nt+1)//2, :(nx+1)//2])
+    BLZ = np.absolute(np.fft.fft2(blz)[:(nt+1)//2, :(nx+1)//2])
     BLZ_4_all_W = np.sum(BLZ, axis=0)
 
     idx = np.argsort(BLZ_4_all_W)
@@ -277,14 +278,14 @@ def get_all_w(run_path, wave_numbers, polarization, theta):
 
 def main():
 
-    # angle of the oblique mode (in radians)
-    theta = 20*np.pi/180 # tan theta = 0.364 < L[1]/L[0]
+    # angle of the oblique mode (in radians) : has to be arctan2(L[1], L[0])
+    theta = np.arctan2(20, 200)
 
     # list of modes : m = 1 is for 1 wavelength in the whole domain
-    modes = [4, 8, 16, 32, 64, 128, 256, 512]
+    modes = [4, 8, 16, 32, 64]
 
     # lists of amplitudes of the magnetic field amplitudes
-    b_amplitudes = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+    b_amplitudes = [0.01, 0.01, 0.01, 0.01, 0.01]
 
     # polarization : -1 for L mode
     wave_nums, b1 = setOfModes(-1, modes, b_amplitudes, theta)
@@ -298,23 +299,27 @@ def main():
     if mpi_rank() == 0:
         sim = ph.global_vars.sim
 
+        # hmmm... because theta has to be set before simulator !
+        np.testing.assert_allclose(np.tan(theta) , sim.simulation_domain()[1]/sim.simulation_domain()[0], atol=1e-15)
+
         L = sim.simulation_domain()[0]
         T = sim.final_time
 
         #for the left mode
         ki, wi, zobi = get_all_w(os.path.join(os.curdir, "setOfModes1d"), wave_nums, -1, theta)
 
-        k_numL = 2*np.pi*ki/L
+        k_numL = 2*np.pi*ki*np.cos(theta)/L
         w_numL = 2*np.pi*wi/T
         print(*('Left mode... k = {:.4f}   w = {:.4f}   b = {:.4f}'.format(k, w, b) for (k, w, b) in zip(k_numL, w_numL, b1)), sep="\n")
 
+    #because the simulation is already set
     ph.global_vars.sim = None
 
     # list of modes : m = 1 is for 1 wavelength in the whole domain
-    modes = [4, 8, 16, 32, 64, 128, 256, 512]
+    modes = [4, 8, 16, 32, 64]
 
     # lists of amplitudes of the magnetic field amplitudes
-    b_amplitudes = [0.005, 0.005, 0.005, 0.005, 0.005, 0.005, 0.005, 0.005]
+    b_amplitudes = [0.005, 0.005, 0.005, 0.005, 0.005]
 
     # polarization : +1 for R mode
     wave_nums, b1 = setOfModes(+1, modes, b_amplitudes)
@@ -331,7 +336,7 @@ def main():
         #for the riht mode
         ki, wi, zobi = get_all_w(os.path.join(os.curdir, "setOfModes1d"), wave_nums, +1, theta)
 
-        k_numR = 2*np.pi*ki/L
+        k_numR = 2*np.pi*ki*np.cos(theta)/L
         w_numR = 2*np.pi*wi/T
         print(*('Right mode... k = {:.4f}   w = {:.4f}   b = {:.4f}'.format(k, w, b) for (k, w, b) in zip(k_numR, w_numR, b1)), sep="\n")
 
