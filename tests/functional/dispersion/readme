@@ -97,6 +97,20 @@ error Right... k = 1.2504   w_the = 2.2564   w_num = 2.1991   err = 2.5395
 error Right... k = 2.5008   w_the = 7.1310   w_num = 6.9115   err = 3.0783
 error Right... k = 0.6252   w_the = 0.8505   w_num = 0.9425   err = 10.8181
 
-## run G
+### run G
 idem runF avec amplitude=0.005 pour les 2 modes
+error Left ... k = 5.1579   w_the = 0.9650   w_num = 0.9425   err = 2.3336
+error Left ... k = 5.0016   w_the = 0.9629   w_num = 0.9425   err = 2.1244
+error Left ... k = 1.2504   w_the = 0.6929   w_num = 0.6283   err = 9.3223
+error Left ... k = 2.5008   w_the = 0.8770   w_num = 0.9425   err = 7.4644
+error Left ... k = 0.6252   w_the = 0.4596   w_num = 0.6283   err = 36.7106
+error Right... k = 10.1595   w_the = 104.2060   w_num = 72.5708   err = 30.3584
+error Right... k = 5.0016   w_the = 25.9790   w_num = 23.8761   err = 8.0945
+error Right... k = 1.2504   w_the = 2.2564   w_num = 2.1991   err = 2.5395
+error Right... k = 2.5008   w_the = 7.1310   w_num = 6.9115   err = 3.0783
+error Right... k = 0.6252   w_the = 0.8505   w_num = 0.9425   err = 10.8181
+
+
+### run H
+idem runG avec amplitude=0.002 pour le mode gauche et boite (200, 10)
 

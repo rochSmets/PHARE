@@ -44,7 +44,7 @@ def setOfModes(polarization, modes, b_amplitudes, theta):
 
         # smallest wavelength is 0.8 = 4 grid pts
         # largest wavelength is 50 = the whole domain (250 pts)
-        cells=(200, 20),
+        cells=(200, 10),
         dl=(0.2, 0.2),
         diag_options={"format": "phareh5",
                       "options": {"dir": "setOfModes2d",
@@ -193,13 +193,13 @@ def get_all_w(run_path, wave_numbers, polarization, theta):
 def main():
 
     # angle of the oblique mode (in radians) : has to be arctan2(L[1], L[0])
-    theta = np.arctan2(20, 200)
+    theta = np.arctan2(10, 200)
 
     # list of modes : m = 1 is for 1 wavelength in the whole domain
     modes = [4, 8, 16, 32, 64]
 
     # lists of amplitudes of the magnetic field amplitudes
-    b_amplitudes = [0.005, 0.005, 0.005, 0.005, 0.005]
+    b_amplitudes = [0.002, 0.002, 0.002, 0.002, 0.002]
 
     # polarization : -1 for L mode
     wave_nums, b1 = setOfModes(-1, modes, b_amplitudes, theta)
