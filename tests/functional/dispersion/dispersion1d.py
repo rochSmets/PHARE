@@ -8,7 +8,7 @@ from pyphare.pharein import ElectronModel
 from pyphare.simulator.simulator import Simulator
 from pyphare.pharein import global_vars as gv
 
-from pyphare.pharesee.hierarchy import finest_field
+#from pyphare.pharesee.hierarchy import finest_field
 import os
 from pyphare.pharesee.run import Run
 from pyphare.pharesee.hierarchy import get_times_from_h5
