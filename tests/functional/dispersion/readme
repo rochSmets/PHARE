@@ -138,4 +138,16 @@ error Right... k = 1.2551   w_the = 2.2693   w_num = 2.1991   err = 3.0939
 
 ### run J
 idem run I avec moins d'energie dans le mode gauche, sauf le + grand k
+error Left ... k = 10.0406   w_the = 0.9903   w_num = 0.0000   err = 100.0000
+error Left ... k = 5.0203   w_the = 0.9632   w_num = 0.9425   err = 2.1504
+error Left ... k = 2.5101   w_the = 0.8777   w_num = 0.9425   err = 7.3769
+error Left ... k = 0.6275   w_the = 0.4608   w_num = 0.4712   err = 2.2654
+error Left ... k = 1.2551   w_the = 0.6941   w_num = 0.6283   err = 9.4807
+error Right... k = 10.0406   w_the = 101.8030   w_num = 71.9425   err = 29.3317
+error Right... k = 5.0203   w_the = 26.1664   w_num = 24.0332   err = 8.1524
+error Right... k = 2.5101   w_the = 7.1785   w_num = 7.0686   err = 1.5315
+error Right... k = 0.6275   w_the = 0.8546   w_num = 0.7854   err = 8.0975
+error Right... k = 1.2551   w_the = 2.2693   w_num = 2.1991   err = 3.0939
 
+### runK
+idem runH avec Tmax=39
