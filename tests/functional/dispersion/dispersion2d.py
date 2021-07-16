@@ -293,17 +293,16 @@ def main():
         w_theR = omega(k_numR, +1)
         w_theL = omega(k_numL, -1)
 
-        errorL = 100*np.fabs(w_numL-w_theL)/w_theL
-        errorR = 100*np.fabs(w_numR-w_theR)/w_theR
-
+        errR = w_theR*T/(2*np.pi)
         errL = w_theL*T/(2*np.pi)
 
-        print(*('errL ... ki = {:.4f}   wi = [{:.4f}, {:.4f}]   w_th = {:.4f}'.format(k, wi-1, wi+1, wth) for (k, wi, wth) in zip(ki, wi, w_theL)), sep="\n")
-        print(*('errR ... ki = {:.4f}   wi = [{:.4f}, {:.4f}]   w_th = {:.4f}'.format(k, wi-1, wi+1, wth) for (k, wi, wth) in zip(ki, wi, w_theR)), sep="\n")
+        print(*('L ... ki = {:4d}   wi = {:4d}   w_th = {:.4f}   errL = {:.4f}'.format(k, w, W, err) for (k, w, W, err) in zip(ki, wi, w_theL, errL)), sep="\n")
+        print(*('R ... ki = {:4d}   wi = {:4d}   w_th = {:.4f}   errL = {:.4f}'.format(k, w, W, err) for (k, w, W, err) in zip(ki, wi, w_theR, errR)), sep="\n")
 
+        print(" ... ... ... ... ...")
 
-        print(*('error Left ... k = {:.4f}   w_the = {:.4f}   w_num = {:.4f}   err = {:.4f}'.format(k, W, w, e) for (k, W, w, e) in zip(k_numL, w_theL, w_numL, errorL)), sep="\n")
-        print(*('error Right... k = {:.4f}   w_the = {:.4f}   w_num = {:.4f}   err = {:.4f}'.format(k, W, w, e) for (k, W, w, e) in zip(k_numR, w_theR, w_numR, errorR)), sep="\n")
+        print(*('L ... k = {:.4f}   w_the = {:.4f}   w_num = {:.4f}'.format(k, W, w) for (k, W, w) in zip(k_numL, w_theL, w_numL)), sep="\n")
+        print(*('R ... k = {:.4f}   w_the = {:.4f}   w_num = {:.4f}'.format(k, W, w) for (k, W, w) in zip(k_numR, w_theR, w_numR)), sep="\n")
 
         assert(1 == 1)
 
