@@ -35,8 +35,8 @@ def setOfModes(polarization, modes, b_amplitudes, theta):
 
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
-        time_step_nbr=30000,
-        final_time=20.,
+        time_step_nbr=40000,
+        final_time=40.,
         ### time_step_nbr=30,
         ### final_time=0.02,
 
