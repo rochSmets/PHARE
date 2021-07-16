@@ -35,8 +35,8 @@ def setOfModes(polarization, modes, b_amplitudes, theta):
 
         # smallest frequency is 0.06 (2pi/Tmax)
         # largest frequency is 3140 (2pi/dt)
-        time_step_nbr=40000,
-        final_time=30.,
+        time_step_nbr=30000,
+        final_time=20.,
         ### time_step_nbr=30,
         ### final_time=0.02,
 
@@ -199,7 +199,7 @@ def main():
     modes = [4, 8, 16, 32, 64]
 
     # lists of amplitudes of the magnetic field amplitudes
-    b_amplitudes = [0.1, 0.1, 0.1, 0.1, 0.1]
+    b_amplitudes = [0.002, 0.002, 0.002, 0.002, 0.002]
 
     # polarization : -1 for L mode
     wave_nums, b1 = setOfModes(-1, modes, b_amplitudes, theta)
@@ -224,9 +224,7 @@ def main():
 
 
 
-        fig, ax = plt.subplots()
-        im = ax.imshow(zobi)
-        fig.savefig("left.pdf")
+        np.save('left2d.npy', zobi)
 
 
 
@@ -260,9 +258,7 @@ def main():
 
 
 
-        fig, ax = plt.subplots()
-        im = ax.imshow(zobi)
-        fig.savefig("right.pdf")
+        np.save('right2d.npy', zobi)
 
 
 
