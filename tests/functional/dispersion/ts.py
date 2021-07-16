@@ -25,10 +25,12 @@ for k in range(nk):
     #if k in range(nk):
     if k in [4, 8, 16, 32, 64]:
         peaks, _ = find_peaks(tt[:,k], height=8, threshold=6, distance=1500, prominence=6)
-        w_ = np.argmax(tt[:,k])
-        print("w = ", w_)
-        if len(peaks) != 0:
-            print(k, peaks, tt[peaks, k], tt[0:10, k])
+        w_ = np.argmax(tt[1:,k])
+        print("k = ", k, "   --   w = ", w_)
+        if k == 64:
+            print(tt[:10, k])
+        ### if len(peaks) != 0:
+        ###     print(k, peaks, tt[peaks, k], tt[0:10, k])
 
 #print(tt.min(), tt.max())
 uu = tt.flatten()

@@ -182,7 +182,7 @@ def get_all_w(run_path, wave_numbers, polarization, theta):
 
     wmodes = []
     for i in range(nm):
-        wmodes.append(np.argmax(BLZ[:,idx[-nm+i]]))
+        wmodes.append(np.argmax(BLZ[1:,idx[-nm+i]]))
 
     print(kmodes, wmodes)
 
@@ -270,7 +270,7 @@ def main():
 
         fig, ax = plt.subplots(figsize=(4,3), nrows=1)
 
-        k_the = np.arange(0.04, 12, 0.001)
+        k_the = np.arange(0.2, 20, 0.001)
         w_thR = omega(k_the, +1)
         w_thL = omega(k_the, -1)
 
@@ -296,6 +296,12 @@ def main():
         errorL = 100*np.fabs(w_numL-w_theL)/w_theL
         errorR = 100*np.fabs(w_numR-w_theR)/w_theR
 
+        errL = w_theL*T/(2*np.pi)
+
+        print(*('errL ... ki = {:.4f}   wi = [{:.4f}, {:.4f}]   w_th = {:.4f}'.format(k, wi-1, wi+1, wth) for (k, wi, wth) in zip(ki, wi, w_theL)), sep="\n")
+        print(*('errR ... ki = {:.4f}   wi = [{:.4f}, {:.4f}]   w_th = {:.4f}'.format(k, wi-1, wi+1, wth) for (k, wi, wth) in zip(ki, wi, w_theR)), sep="\n")
+
+
         print(*('error Left ... k = {:.4f}   w_the = {:.4f}   w_num = {:.4f}   err = {:.4f}'.format(k, W, w, e) for (k, W, w, e) in zip(k_numL, w_theL, w_numL, errorL)), sep="\n")
         print(*('error Right... k = {:.4f}   w_the = {:.4f}   w_num = {:.4f}   err = {:.4f}'.format(k, W, w, e) for (k, W, w, e) in zip(k_numR, w_theR, w_numR, errorR)), sep="\n")
 
@@ -304,4 +310,6 @@ def main():
 
 if __name__=="__main__":
     main()
+
+
 
