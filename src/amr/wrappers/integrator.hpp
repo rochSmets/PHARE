@@ -30,7 +30,7 @@ class Integrator
 public:
     static constexpr std::size_t dimension = _dimension;
 
-    double advance(double dt) { return timeRefIntegrator_->advanceHierarchy(dt); }
+    double advance(double dt) { return timeRefIntegrator_->advanceHierarchy(dt, true); }
 
     void initialize() { timeRefIntegrator_->initializeHierarchy(); }
 
