@@ -62,7 +62,7 @@ def _current2d(bx, by, bz, dx, dy):
 
 
 def _compute_current(patch):
-    if patch.box.ndim ==1 : 
+    if patch.box.ndim ==1 :
         By = patch.patch_datas["By"].dataset[:]
         xby  = patch.patch_datas["By"].x
         Bz = patch.patch_datas["Bz"].dataset[:]
@@ -113,6 +113,89 @@ def _compute_divB(patch):
 
     else:
         raise RuntimeError("dimension not implemented")
+
+
+
+
+
+
+
+
+def _stress1d(ghostBox, dataSet):
+    from scipy.stats import binned_statistic
+
+    xx = np.zeros(ghostBox.shape)
+
+    i = dataSet.iCells[:, 0]
+
+    binx = np.arange(ghostBox.lower[0], ghostBox.upper[0]+1)
+
+    xx = binned_statistic(i, dataSet.weights[:,0]*dataSet.v[:, 0]*dataSet.v[:, 0], statistic='sum', bins=[binx]).statistic
+    xy = binned_statistic(i, dataSet.weights[:,0]*dataSet.v[:, 0]*dataSet.v[:, 1], statistic='sum', bins=[binx]).statistic
+    xz = binned_statistic(i, dataSet.weights[:,0]*dataSet.v[:, 0]*dataSet.v[:, 2], statistic='sum', bins=[binx]).statistic
+    yy = binned_statistic(i, dataSet.weights[:,0]*dataSet.v[:, 1]*dataSet.v[:, 1], statistic='sum', bins=[binx]).statistic
+    yz = binned_statistic(i, dataSet.weights[:,0]*dataSet.v[:, 1]*dataSet.v[:, 2], statistic='sum', bins=[binx]).statistic
+    zz = binned_statistic(i, dataSet.weights[:,0]*dataSet.v[:, 2]*dataSet.v[:, 2], statistic='sum', bins=[binx]).statistic
+
+    return xx, xy, xz, yy, yz, zz
+
+
+
+
+def _stress2d(ghostBox, dataSet):
+    from scipy.stats import binned_statistic_2d
+
+    xx = np.zeros(ghostBox.shape)
+
+    i = dataSet.iCells[:, 0]
+    j = dataSet.iCells[:, 1]
+
+    binx = np.arange(ghostBox.lower[0], ghostBox.upper[0]+1)
+    biny = np.arange(ghostBox.lower[1], ghostBox.upper[1]+1)
+
+    xx = binned_statistic_2d(i, j, dataSet.weights[:,0]*dataSet.v[:, 0]*dataSet.v[:, 0], statistic='sum', bins=[binx, biny]).statistic
+    xy = binned_statistic_2d(i, j, dataSet.weights[:,0]*dataSet.v[:, 0]*dataSet.v[:, 1], statistic='sum', bins=[binx, biny]).statistic
+    xz = binned_statistic_2d(i, j, dataSet.weights[:,0]*dataSet.v[:, 0]*dataSet.v[:, 2], statistic='sum', bins=[binx, biny]).statistic
+    yy = binned_statistic_2d(i, j, dataSet.weights[:,0]*dataSet.v[:, 1]*dataSet.v[:, 1], statistic='sum', bins=[binx, biny]).statistic
+    yz = binned_statistic_2d(i, j, dataSet.weights[:,0]*dataSet.v[:, 1]*dataSet.v[:, 2], statistic='sum', bins=[binx, biny]).statistic
+    zz = binned_statistic_2d(i, j, dataSet.weights[:,0]*dataSet.v[:, 2]*dataSet.v[:, 2], statistic='sum', bins=[binx, biny]).statistic
+
+    return xx, xy, xz, yy, yz, zz
+
+
+
+
+def _compute_cross_correlation(patch):
+    from pyphare.core.gridlayout import GridLayout
+    import pyphare.core.box as mbox
+
+    domain_pop_name = list(patch.patch_datas.keys())[0]
+    dset = patch.patch_datas[domain_pop_name].dataset
+
+    ndim = patch.box.ndim
+
+    nbG = GridLayout().nbrGhosts(interpOrder = 1, centering = "dual")
+    ghosts = [nbG]*ndim
+    ghostBox = mbox.grow(patch.box, ghosts)
+
+    # this is a 0th order interpolation : we could do better in a dedicated call back func
+    if patch.box.ndim == 1:
+        xx, xy, xz, yy, yz, zz = _stress1d(ghostBox, dset)
+    if patch.box.ndim == 2:
+        xx, xy, xz, yy, yz, zz = _stress2d(ghostBox, dset)
+
+    return ({"name":"VxVx", "data":xx, "centering":["dual"]*patch.box.ndim},
+            {"name":"VxVy", "data":xy, "centering":["dual"]*patch.box.ndim},
+            {"name":"VxVz", "data":xz, "centering":["dual"]*patch.box.ndim},
+            {"name":"VyVy", "data":yy, "centering":["dual"]*patch.box.ndim},
+            {"name":"VyVz", "data":yz, "centering":["dual"]*patch.box.ndim},
+            {"name":"VzVz", "data":zz, "centering":["dual"]*patch.box.ndim})
+
+
+
+
+
+
 
 
 
@@ -324,3 +407,56 @@ class Run:
         root_cell_width = np.asarray(data_file.attrs["cell_width"])
 
         return root_cell_width/fac
+
+
+
+
+
+    def GetStress(self, time, pop_name, base='xyz'):
+        from pyphare.pharesee.hierarchy import hierarchy_fromh5
+        from pyphare.pharesee.hierarchy import hierarchy_toh5
+        import h5py
+
+        if isinstance(pop_name, (list, tuple)):
+            assert len(pop_name) == 1
+        else:
+            assert isinstance(pop_name, str)
+
+        assert(base in ['xyz', 'aligned'])
+
+        h5file = os.path.join(self.path, f'ions_pop_{pop_name}_pressure.h5')
+
+        if os.path.isfile(h5file):
+            f = h5py.File(h5file, 'r')
+
+            time_str = "{0:.10f}".format(time)
+
+            if time_str in list(f['t'].keys()):
+                f = h5py.File(h5file)
+                f.close()
+                h = hierarchy_fromh5(h5file, time_str, None, silent=False)
+            else:
+                raise RuntimeError(f"time {time} not already in this Hierarchy, hence need to be calculated before")
+            # else:
+            #     h = compute_hier_from(self.GetParticles(time, pop_name), _compute_cross_correlation)
+            #     h.multiplied_by(self.GetMass(pop_name))
+            #     h.rename(['VxVx', 'VxVy', 'VxVz', 'VyVy', 'VyVz', 'VzVz'], ['P_xx', 'P_xy', 'P_xz', 'P_yy', 'P_yz', 'P_zz'])
+
+            #     hierarchy_toh5(h5file, time, h)
+            f.close()
+
+        else:
+            raise RuntimeError("dimension not implemented")
+
+        # else:
+        #     h = compute_hier_from(self.GetParticles(time, pop_name), _compute_cross_correlation)
+        #     h.multiplied_by(self.GetMass(pop_name))
+        #     h.rename(['VxVx', 'VxVy', 'VxVz', 'VyVy', 'VyVz', 'VzVz'], ['S_xx', 'S_xy', 'S_xz', 'S_yy', 'S_yz', 'S_zz'])
+
+        #     hierarchy_toh5(h5file, time, h)
+
+        if base == 'aligned':
+            pass
+
+        return h
+

@@ -224,6 +224,15 @@ class Patch:
         return self.copy()
 
 
+    def multiplied_by(self, scalar):
+        names = self.patch_datas.keys()
+        for name in names:
+            self.patch_datas[name].dataset = scalar*self.patch_datas[name].dataset
+
+
+
+
+
 
 class PatchLevel:
     """is a collection of patches """
@@ -879,6 +888,66 @@ class PatchHierarchy:
         return final, dp(final, **kwargs)
 
 
+    # def _multiply_by_(self, names, new_names, scalar):
+    #     assert(len(names) == len(new_names))
+    #
+    #     patch_levels = self.patch_levels
+    #     domain_box = self.domain_box
+    #     new_patch_level = {}
+    #
+    #     for ilvl, lvl in patch_levels.items():
+    #         new_patches = {}
+    #         for patch in lvl.patches:
+    #             patch.multiply_by(scalar)
+    #             new_pd = {}
+    #             layout = patch.layout
+    #             for name, new_name in zip(names, new_names):
+    #                 dset = scalar*patch.patch_datas[name].dataset
+    #                 pd = FieldData(layout, new_name, dset, centering=patch.patch_datas[name].centerings)
+    #                 new_pd[new_name] = pd
+    #
+    #             if ilvl not in new_patches:
+    #                 new_patches[ilvl] = []
+    #
+    #             new_patches[ilvl].append(Patch(new_pd, patch.id))
+    #
+    #         new_patch_level[ilvl] = PatchLevel(ilvl, new_patches[ilvl])
+    #
+    #     return PatchHierarchy(new_patch_level, domain_box, time=list(self.time_hier.keys())[0])
+
+
+    def multiplied_by(self, scalar):
+
+        patch_levels = self.patch_levels
+
+        for ilvl, lvl in patch_levels.items():
+            for patch in lvl.patches:
+                patch.multiplied_by(scalar)
+
+
+    def rename(self, names, new_names):
+        assert(len(names) == len(new_names))
+        patch_levels = self.patch_levels
+        for ilvl, lvl in patch_levels.items():
+            for patch in lvl.patches:
+                for name, new_name in zip(names, new_names):
+                    patch.patch_datas[new_name] = patch.patch_datas.pop(name)
+
+
+    def get_dataset_names(self):
+        dset_names = []
+        patch_levels = self.patch_levels
+        for ilvl, lvl in patch_levels.items():
+            for patch in lvl.patches:
+                names = list(patch.patch_datas.keys())
+                for name in names :
+                    if name not in dset_names:
+                        dset_names.append(name)
+        return dset_names
+
+
+
+
 
 
 def amr_grid(hierarchy, time):
@@ -967,7 +1036,14 @@ field_qties = {"EM_B_x": "Bx",
                "bulkVelocity_x": "Vx",
                "bulkVelocity_y": "Vy",
                "bulkVelocity_z": "Vz",
-               "density": "rho", "tags":"tags"}
+               "density": "rho",
+               "Pressure_xx": "Pxx",
+               "Pressure_xy": "Pxy",
+               "Pressure_xz": "Pxz",
+               "Pressure_yy": "Pyy",
+               "Pressure_yz": "Pyz",
+               "Pressure_zz": "Pzz",
+               "tags": "tags"}
 
 
 
@@ -1279,6 +1355,52 @@ def hierarchy_fromh5(h5_filename, time, hier, silent=True):
             hier = hierarchy_fromh5(h5_filename, time, hier)
 
         return hier
+
+
+
+
+def hierarchy_toh5(h5_filename, time, hier, silent=True):
+    import h5py
+
+    if os.path.isfile(h5_filename):
+        f = h5py.File(h5_filename, 'r+')
+    else:
+        f = h5py.File(h5_filename, 'w-')
+
+        f.attrs['cell_width'] = hier.patch_levels[0].patches[0].dl
+        f.attrs['dimension'] = hier.ndim
+        f.attrs['domain_box'] = hier.domain_box.upper-hier.domain_box.lower
+        f.attrs['interpOrder'] = hier.patch_levels[0].patches[0].layout.interp_order
+        f.attrs['layoutType'] = hier.patch_levels[0].patches[0].layout.impl
+        f.attrs['origin'] = hier.patch_levels[0].patches[0].layout.origin
+
+    if 't' not in f:
+        base_node = f.create_group(h5_time_grp_key)
+    else:
+        base_node = f.get('t')
+
+    if "{0:.10f}".format(time) not in list(base_node):
+        time_node = base_node.create_group("{0:.10f}".format(time))
+
+        for ilvl, lvl in hier.levels(time).items():
+            level_node = time_node.create_group("pl{0:d}".format(ilvl))
+            for patch in lvl.patches:
+                patch_node = level_node.create_group(patch.id)
+
+                patch_node.attrs['origin'] = patch.origin
+                patch_node.attrs['lower'] = patch.box.lower
+                patch_node.attrs['upper'] = patch.box.upper
+                patch_node.attrs['mpi_rank'] = patch.id.strip('p').split('#')[0]
+                patch_node.attrs['nbrCells'] = patch.layout.box.shape
+
+                for name in list(patch.patch_datas.keys()):
+                    patch_node.create_dataset(name, data=patch.patch_datas[name].dataset, dtype='float64')
+
+    else:
+        time_node = base_node.get("{0:.10f}".format(time))
+        print("group 't/{}' already exist, so do the associated dataset : no need to write in h5 file".format(time))
+
+    f.close()
 
 
 
