@@ -136,7 +136,7 @@ void ConcreteLoadBalancerHybridStrategyNPPC<PHARE_T>::compute(
         {
             for (std::uint32_t i_loc = 0, i_amr = amr_start[0]; i_loc < nbrCells[0]; ++i_loc, ++i_amr)
             {
-                for (std::uint32_t = 0, j_amr = amr_start[1]; j_loc < nbrCells[1]; ++j_loc, ++j_amr)
+                for (std::uint32_t j_loc = 0, j_amr = amr_start[1]; j_loc < nbrCells[1]; ++j_loc, ++j_amr)
                 {
                     for (std::uint32_t k_loc = 0, k_amr = amr_start[2]; k_loc < nbrCells[2];
                          ++k_loc, ++k_amr)
