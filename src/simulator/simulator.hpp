@@ -264,11 +264,8 @@ void Simulator<dim, _interp, nbRefinedPart>::hybrid_init(initializer::PHAREDict 
 
 
 
-    // auto lbm_ = std::make_unique<amr::LoadBalancerManager<dim>>(maxLevelNumber_);
     auto lbm_ = std::make_unique<amr::LoadBalancerManager<dim>>(dict);
-    // auto lbe_ = std::make_unique<amr::LoadBalancerEstimatorHybrid<PHARETypes>>(lbm_->getId());
-    // auto lbe_
-    //    = std::make_unique<amr::LoadBalancerEstimatorHybrid<PHARETypes>>("nppc", lbm_->getId());
+
     auto lbe_ = std::make_unique<amr::LoadBalancerEstimatorHybrid<PHARETypes>>(
         dict["simulation"]["AMR"]["loadbalancing"].template to<std::string>(), lbm_->getId());
 

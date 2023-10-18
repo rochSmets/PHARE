@@ -159,6 +159,13 @@ void ConcreteLoadBalancerHybridStrategyNPPC<PHARE_T>::compute(
             }
         }
     }
+
+    // TODO here, we have the lb_view value correctly set on all patches. we also know the id_
+    // so this is where we should call setWorkloadPatchDataIndex... which is a method of the CascadePartitioner
+    // lb_view is a local container containing the datz
+    // the loadbalancezrmanager knows the id, as well as the loadbalancerestimator
+    // and the loadbalancerestimator is a cascadpartotioner
+
 }
 
 } // namespace PHARE::amr

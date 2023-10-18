@@ -5,6 +5,7 @@
 #include <string>
 
 #include <SAMRAI/hier/PatchLevel.h>
+#include "SAMRAI/mesh/CascadePartitioner.h"
 
 #include "amr/resources_manager/amr_utils.hpp"
 #include "amr/physical_models/physical_model.hpp"
@@ -13,11 +14,13 @@
 
 namespace PHARE::amr
 {
-class LoadBalancerEstimator
+template<std::size_t dim>
+class LoadBalancerEstimator : public SAMRAI::mesh::CascadePartitioner
 {
 public:
     LoadBalancerEstimator(int const id)
-        : id_{id}
+        : SAMRAI::mesh::CascadePartitioner{SAMRAI::tbox::Dimension{dim}, "cascade_partitioner"}
+        , id_{id}
     {
     }
 
