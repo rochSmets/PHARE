@@ -14,13 +14,11 @@
 
 namespace PHARE::amr
 {
-template<std::size_t dim>
-class LoadBalancerEstimator : public SAMRAI::mesh::CascadePartitioner
+class LoadBalancerEstimator
 {
 public:
     LoadBalancerEstimator(int const id)
-        : SAMRAI::mesh::CascadePartitioner{SAMRAI::tbox::Dimension{dim}, "cascade_partitioner"}
-        , id_{id}
+        : id_{id}
     {
     }
 

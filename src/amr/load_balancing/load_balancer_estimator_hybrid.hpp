@@ -20,7 +20,7 @@
 namespace PHARE::amr
 {
 template<typename PHARE_T>
-class LoadBalancerEstimatorHybrid : public LoadBalancerEstimator<PHARE_T::dimension>
+class LoadBalancerEstimatorHybrid : public LoadBalancerEstimator
 {
     using HybridModel     = typename PHARE_T::HybridModel_t;
     using gridlayout_type = typename HybridModel::gridlayout_type;
@@ -30,7 +30,7 @@ class LoadBalancerEstimatorHybrid : public LoadBalancerEstimator<PHARE_T::dimens
 public:
     // LoadBalancerEstimatorHybrid(int const id)
     LoadBalancerEstimatorHybrid(std::string strategy_name, int const id)
-        : LoadBalancerEstimator<PHARE_T::dimension>{id}
+        : LoadBalancerEstimator{id}
         , strat_{LoadBalancerHybridStrategyFactory<PHARE_T>::create(strategy_name, id)}
     {
     }

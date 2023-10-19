@@ -1,4 +1,3 @@
-
 #ifndef PHARE_SIMULATOR_SIMULATOR_HPP
 #define PHARE_SIMULATOR_SIMULATOR_HPP
 
@@ -270,6 +269,8 @@ void Simulator<dim, _interp, nbRefinedPart>::hybrid_init(initializer::PHAREDict 
         dict["simulation"]["AMR"]["loadbalancing"].template to<std::string>(), lbm_->getId());
 
     lbm_->addLoadBalancerEstimator(0, maxLevelNumber_ - 1, std::move(lbe_));
+    lbm_->addLoadBalancer(std::make_unique<SAMRAI::mesh::CascadePartitioner>(
+        SAMRAI::tbox::Dimension{dim}, "cascade"));
     multiphysInteg_->setLoadBalancerManager(std::move(lbm_));
 
 

@@ -39,7 +39,13 @@ public:
     int getId() const;
 
     void addLoadBalancerEstimator(int const iLevel_min, int const iLevel_max,
-                                  std::shared_ptr<amr::LoadBalancerEstimator<dim>> lbe);
+                                  std::shared_ptr<amr::LoadBalancerEstimator> lbe);
+
+    void addLoadBalancer(std::unique_ptr<SAMRAI::mesh::LoadBalanceStrategy> loadBalancer)
+    {
+        loadBalancer_ = std::move(loadBalancer);
+        loadBalancer_->setWorkloadPatchDataIndex(id_);
+    }
 
     void allocate(SAMRAI::hier::Patch& patch, double const allocateTime);
 
@@ -54,7 +60,8 @@ private:
     std::shared_ptr<SAMRAI::hier::VariableContext> context_;
     int const id_;
     int const maxLevelNumber_;
-    std::vector<std::shared_ptr<amr::LoadBalancerEstimator<dim>>> loadBalancerEstimators_;
+    std::vector<std::shared_ptr<amr::LoadBalancerEstimator>> loadBalancerEstimators_;
+    std::unique_ptr<SAMRAI::mesh::LoadBalanceStrategy> loadBalancer_;
 };
 
 
@@ -72,7 +79,7 @@ inline int LoadBalancerManager<dim>::getId() const
 template<std::size_t dim>
 inline void
 LoadBalancerManager<dim>::addLoadBalancerEstimator(int const iLevel_min, int const iLevel_max,
-                                                   std::shared_ptr<amr::LoadBalancerEstimator<dim>> lbe)
+                                                   std::shared_ptr<amr::LoadBalancerEstimator> lbe)
 {
     for (auto ilevel = iLevel_min; ilevel <= iLevel_max; ilevel++)
     {
