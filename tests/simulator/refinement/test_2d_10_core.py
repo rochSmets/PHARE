@@ -137,7 +137,7 @@ def make_fig(hier, fig_name, ilvl, extra_collections=[]):
         collections = [
             {
                 "boxes": l0_in_l1,
-                "value": 1,
+                "facecolor": "grey",
             }
         ]
         if 1 in hier.levels():
@@ -145,7 +145,7 @@ def make_fig(hier, fig_name, ilvl, extra_collections=[]):
             collections += [
                 {
                     "boxes": l1_over_l0,
-                    "value": 2,
+                    "facecolor": "yellow",
                 }
             ]
         hier.plot_2d_patches(
@@ -177,7 +177,7 @@ def post_advance(new_time):
             extra_collections += [
                 {
                     "boxes": errors,
-                    "value": 1,
+                    "facecolor": "black",
                 }
             ]
         make_fig(L0L1_datahier, L0L1_diags.split("/")[-1], 1, extra_collections)
