@@ -16,7 +16,7 @@ def hierarchy_from_func1d(func, hier, **kwargs):
 
 
 def hierarchy_from_func2d(func, hier, **kwargs):
-    from pyphare.pharesee.hierarchy.hierarchy_utils import compute_hier_from
+    assert hier.ndim == 2
 
     def compute_(patch_datas, **kwargs):
         ref_name = next(iter(patch_datas.keys()))

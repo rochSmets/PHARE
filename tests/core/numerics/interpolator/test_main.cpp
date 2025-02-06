@@ -535,6 +535,7 @@ public:
             part.iCell[0] = 19; // AMR index
             part.delta[0] = 0.5;
             part.weight   = 1.0;
+            part.charge   = 2.0;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -543,6 +544,7 @@ public:
             part.iCell[0] = 20; // AMR index
             part.delta[0] = 0.5;
             part.weight   = 0.4;
+            part.charge   = 1.85;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -551,6 +553,7 @@ public:
             part.iCell[0] = 20; // AMR index
             part.delta[0] = 0.5;
             part.weight   = 0.6;
+            part.charge   = 2.1;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -562,6 +565,7 @@ public:
             part.iCell[0] = 19; // AMR index
             part.delta[0] = 0.0;
             part.weight   = 1.0;
+            part.charge   = 2.0;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -570,6 +574,7 @@ public:
             part.iCell[0] = 20; // AMR index
             part.delta[0] = 0.0;
             part.weight   = 0.2;
+            part.charge   = 3.2;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -578,6 +583,7 @@ public:
             part.iCell[0] = 20; // AMR index
             part.delta[0] = 0.0;
             part.weight   = 0.8;
+            part.charge   = 1.7;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -586,6 +592,7 @@ public:
             part.iCell[0] = 21; // AMR index
             part.delta[0] = 0.0;
             part.weight   = 1.0;
+            part.charge   = 2.0;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -597,6 +604,7 @@ public:
             part.iCell[0] = 18; // AMR index
             part.delta[0] = 0.5;
             part.weight   = 1.0;
+            part.charge   = 2.0;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -605,6 +613,7 @@ public:
             part.iCell[0] = 19; // AMR index
             part.delta[0] = 0.5;
             part.weight   = 1.0;
+            part.charge   = 2.0;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -613,6 +622,7 @@ public:
             part.iCell[0] = 20; // AMR index
             part.delta[0] = 0.5;
             part.weight   = 1.0;
+            part.charge   = 2.0;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -621,6 +631,7 @@ public:
             part.iCell[0] = 21; // AMR index
             part.delta[0] = 0.5;
             part.weight   = 0.1;
+            part.charge   = 3.35;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -629,6 +640,7 @@ public:
             part.iCell[0] = 21; // AMR index
             part.delta[0] = 0.5;
             part.weight   = 0.9;
+            part.charge   = 1.85;
             part.v[0]     = +2.;
             part.v[1]     = -1.;
             part.v[2]     = +1.;
@@ -652,6 +664,7 @@ TYPED_TEST_P(ACollectionOfParticles_1d, DepositCorrectlyTheirWeight_1d)
 
     auto const& [vx, vy, vz] = this->v();
     EXPECT_DOUBLE_EQ(this->rho(idx), 1.0);
+    EXPECT_DOUBLE_EQ(this->rho_c(idx), 2.0);
     EXPECT_DOUBLE_EQ(vx(idx), 2.0);
     EXPECT_DOUBLE_EQ(vy(idx), -1.0);
     EXPECT_DOUBLE_EQ(vz(idx), 1.0);
