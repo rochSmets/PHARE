@@ -13,14 +13,15 @@
 #include <core/hybrid/hybrid_quantities.hpp>
 #include <core/utilities/types.hpp>
 
+#include <core/hybrid/hybrid_quantities.hpp>
+#include <core/utilities/types.hpp>
+
 #include <SAMRAI/tbox/SAMRAIManager.h>
 #include <SAMRAI/tbox/SAMRAI_MPI.h>
 
 #include "gtest/gtest.h"
 
 #include <string>
-#include <utility>
-#include <vector>
 
 
 #include "tests/initializer/init_functions.hpp"
@@ -211,6 +212,30 @@ TYPED_TEST_P(aResourceUserCollection, hasPointersValidOnlyWithGuard)
 
 
 
+TYPED_TEST_P(aResourceUserCollection, hasPointersValidWithEnumerate)
+{
+    TypeParam resourceUserCollection;
+
+    auto check = [this](auto& resourceUserPack) {
+        auto& hierarchy_   = this->hierarchy->hierarchy;
+        auto& resourceUser = resourceUserPack.user;
+        auto& rm           = this->resourcesManager;
+        for (int iLevel = 0; iLevel < hierarchy_->getNumberOfLevels(); ++iLevel)
+        {
+            auto patchLevel = hierarchy_->getPatchLevel(iLevel);
+            for (auto const& patch : rm.enumerate(*patchLevel, resourceUser))
+            {
+                EXPECT_TRUE(resourceUser.isUsable());
+                EXPECT_FALSE(resourceUser.isSettable());
+            }
+            EXPECT_FALSE(resourceUser.isUsable());
+            EXPECT_TRUE(resourceUser.isSettable());
+        }
+    };
+
+    std::apply(check, resourceUserCollection);
+}
+
 
 TEST(usingResourcesManager, toGetTimeOfAResourcesUser)
 {
@@ -243,14 +268,14 @@ TEST(usingResourcesManager, toGetTimeOfAResourcesUser)
 
 
 
-REGISTER_TYPED_TEST_SUITE_P(aResourceUserCollection, hasPointersValidOnlyWithGuard);
+REGISTER_TYPED_TEST_SUITE_P(aResourceUserCollection, hasPointersValidOnlyWithGuard,
+                            hasPointersValidWithEnumerate);
 
 
 typedef ::testing::Types<IonPop1DOnly, VecField1DOnly, Ions1DOnly, Electromag1DOnly,
                          HybridState1DOnly>
     MyTypes;
 INSTANTIATE_TYPED_TEST_SUITE_P(testResourcesManager, aResourceUserCollection, MyTypes);
-
 
 
 
@@ -268,6 +293,7 @@ struct VecFieldResource
     VecField1D B{"B", HybridQuantity::Vector::B};
 };
 
+
 struct ResourceUser
 {
     using Resources = std::variant<FieldResource>;
@@ -280,6 +306,7 @@ struct ResourceUser
 
     std::vector<Resources> resources;
 };
+
 
 
 TEST(usingResources, test_variants_helpers)
@@ -298,6 +325,32 @@ TEST(usingResources, test_variants_helpers)
         auto& B = get_as_ref_or_throw<VecFieldResource>(resources);
     }
 }
+
+
+TEST(usingResources, test_variants_resource_helpers)
+{
+    using Resources = std::variant<Field1D, VecField1D>;
+
+    std::array<std::uint32_t, 1> cells{5};
+    Field1D moe_{"moe", HybridQuantity::Scalar::rho, nullptr, cells};
+    VecField1D B_{"B", HybridQuantity::Vector::B};
+    Field1D rho_{"rho", HybridQuantity::Scalar::rho, nullptr, cells};
+    VecField1D E_{"E", HybridQuantity::Vector::E};
+
+    std::vector<Resources> resources{rho_, moe_, B_, E_};
+    {
+        auto const& rho = get_from_variants(resources, rho_);
+        EXPECT_EQ(rho.name(), "rho");
+
+        auto const& B = get_from_variants(resources, B_);
+        EXPECT_EQ(B.name(), "B");
+    }
+    auto [rho, B] = get_from_variants(resources, rho_, B_);
+    EXPECT_EQ(rho.name(), "rho");
+    EXPECT_EQ(B.name(), "B");
+}
+
+
 
 TEST(usingResourcesManager, test_variants)
 {
@@ -322,6 +375,7 @@ TEST(usingResourcesManager, test_variants)
             auto dataOnPatch = resourcesManager.setOnPatch(*patch, resourceUser);
             auto&& [r0, r1]  = resourceUser.get();
             r1.rho.data()[4] = 5;
+            
             ++patches;
         }
 
@@ -332,6 +386,7 @@ TEST(usingResourcesManager, test_variants)
             auto dataOnPatch = resourcesManager.setOnPatch(*patch, resourceUser);
             auto&& [r0, r1]  = resourceUser.get();
             EXPECT_EQ(r1.rho.data()[4], 5);
+
             ++checks;
         }
 

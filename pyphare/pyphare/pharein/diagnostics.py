@@ -222,6 +222,7 @@ def population_in_model(population):
 class FluidDiagnostics_(Diagnostics):
     fluid_quantities = [
         "density",
+        "charge_density",
         "mass_density",
         "flux",
         "bulkVelocity",
@@ -242,6 +243,9 @@ class FluidDiagnostics_(Diagnostics):
             raise ValueError("Error: missing population_name")
         elif "population_name" in kwargs:
             self.population_name = kwargs["population_name"]
+
+        if "population_name" not in kwargs and kwargs["quantity"] == "density":
+            raise ValueError("Error: cannot use density without population name")
 
         if kwargs["quantity"] not in FluidDiagnostics_.fluid_quantities:
             error_msg = "Error: '{}' not a valid fluid diagnostics : " + ", ".join(

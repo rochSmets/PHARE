@@ -321,7 +321,62 @@ namespace amr
             return ids;
         }
 
+        // iterate per patch and set args on patch
+        template<typename... Args>
+        auto inline enumerate(SAMRAI::hier::PatchLevel& level, Args&&... args)
+        {
+            return LevelLooper<Args...>{*this, level, args...};
+        }
+
     private:
+        template<typename... Args>
+        struct LevelLooper
+        {
+            LevelLooper(ResourcesManager& rm, SAMRAI::hier::PatchLevel& lvl, Args&... arrgs)
+                : rm{rm}
+                , level{lvl}
+                , args{std::forward_as_tuple(arrgs...)}
+            {
+            }
+
+
+            struct Iterator
+            {
+                void operator++() { ++raw; }
+                bool operator==(Iterator const& that) { return raw == that.raw; }
+                bool operator!=(Iterator const& that) { return raw != that.raw; }
+                std::shared_ptr<SAMRAI::hier::Patch> const& operator*()
+                {
+                    looper->set(**raw);
+                    return *raw;
+                }
+
+                ~Iterator() { looper->unset(); }
+
+                LevelLooper* looper;
+                SAMRAI::hier::PatchLevel::Iterator raw;
+            };
+
+            void set(auto& patch)
+            {
+                std::apply([&](auto&... user) { ((rm.setResources_(user, patch)), ...); }, args);
+            }
+
+            void unset()
+            {
+                std::apply([&](auto&... user) { ((rm.unsetResources_(user)), ...); }, args);
+            }
+
+            auto begin() { return Iterator{this, level.begin()}; }
+            auto end() { return Iterator{this, level.end()}; };
+
+            ResourcesManager& rm;
+            SAMRAI::hier::PatchLevel& level;
+            std::tuple<Args&...> args;
+        };
+
+
+
         template<typename ResourcesView>
         void getIDs_(ResourcesView& obj, std::vector<int>& IDs) const
         {
@@ -363,42 +418,56 @@ namespace amr
         /** \brief this specialization of getResourcesPointer_ is used when
          * the client code wants to get a pointer to a patch data resource
          */
-        template<typename ResourceType, typename RequestedPtr>
+        template<typename ResourceType>
         auto getResourcesPointer_(ResourcesInfo const& resourcesVariableInfo,
                                   SAMRAI::hier::Patch const& patch) const
         {
-            if constexpr (std::is_same_v<RequestedPtr, UseResourcePtr>)
-            {
-                return getPatchData_<ResourceType>(resourcesVariableInfo, patch);
-            }
+            return getPatchData_<ResourceType>(resourcesVariableInfo, patch);
+        }
 
-            else if constexpr (std::is_same_v<RequestedPtr, UseNullPtr>)
-            {
-                return static_cast<decltype(getPatchData_<ResourceType>(resourcesVariableInfo,
-                                                                        patch))>(nullptr);
-            }
+        template<typename ResourceType>
+        auto getResourcesNullPointer_(ResourcesInfo const& resourcesVariableInfo) const
+        {
+            using patch_data_type            = ResourceType::patch_data_type;
+            auto constexpr patch_data_ptr_fn = &patch_data_type::getPointer;
+            using PointerType = std::invoke_result_t<decltype(patch_data_ptr_fn), patch_data_type>;
+            return static_cast<PointerType>(nullptr);
         }
 
 
 
 
-        template<typename ResourcesView, typename NullOrResourcePtr>
-        void setResources_(ResourcesView& obj, NullOrResourcePtr nullOrResourcePtr,
-                           SAMRAI::hier::Patch const& patch) const
+        template<typename ResourcesView>
+        void setResources_(ResourcesView& obj, SAMRAI::hier::Patch const& patch) const
         {
             if constexpr (is_resource<ResourcesView>::value)
             {
-                setResourcesInternal_(obj, patch, nullOrResourcePtr);
+                setResourcesInternal_(obj, patch);
             }
             else
             {
                 static_assert(has_sub_resources_v<ResourcesView>);
 
                 handle_sub_resources( //
-                    [&](auto&&... args) { this->setResources_(args...); }, obj, nullOrResourcePtr,
-                    patch);
+                    [&](auto&&... args) { this->setResources_(args...); }, obj, patch);
             }
         }
+
+        template<typename ResourcesView>
+        void unsetResources_(ResourcesView& obj) const
+        {
+            if constexpr (is_resource<ResourcesView>::value)
+            {
+                unsetResourcesInternal_(obj);
+            }
+            else
+            {
+                static_assert(has_sub_resources_v<ResourcesView>);
+                handle_sub_resources([&](auto&&... args) { this->unsetResources_(args...); }, obj);
+            }
+        }
+
+
         template<typename ResourcesView>
         void registerResource_(ResourcesView const& view)
         {
@@ -420,9 +489,8 @@ namespace amr
         /** \brief setResourcesInternal_ aims at setting ResourcesView pointers to the
          * appropriate data on the Patch or to reset them to nullptr.
          */
-        template<typename ResourcesView, typename RequestedPtr>
-        void setResourcesInternal_(ResourcesView& obj, SAMRAI::hier::Patch const& patch,
-                                   RequestedPtr) const
+        template<typename ResourcesView>
+        void setResourcesInternal_(ResourcesView& obj, SAMRAI::hier::Patch const& patch) const
         {
             using ResourceResolver_t = ResourceResolver<This, ResourcesView>;
             using ResourcesType      = typename ResourceResolver_t::type;
@@ -431,8 +499,20 @@ namespace amr
             if (resourceInfoIt == nameToResourceInfo_.end())
                 throw std::runtime_error("Resources not found !");
 
-            obj.setBuffer(
-                getResourcesPointer_<ResourcesType, RequestedPtr>(resourceInfoIt->second, patch));
+            obj.setBuffer(getResourcesPointer_<ResourcesType>(resourceInfoIt->second, patch));
+        }
+
+        template<typename ResourcesView>
+        void unsetResourcesInternal_(ResourcesView& obj) const
+        {
+            using ResourceResolver_t = ResourceResolver<This, ResourcesView>;
+            using ResourcesType      = typename ResourceResolver_t::type;
+
+            auto const& resourceInfoIt = nameToResourceInfo_.find(obj.name());
+            if (resourceInfoIt == nameToResourceInfo_.end())
+                throw std::runtime_error("Resources not found !");
+
+            obj.setBuffer(getResourcesNullPointer_<ResourcesType>(resourceInfoIt->second));
         }
 
 

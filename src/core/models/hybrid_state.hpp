@@ -37,7 +37,8 @@ namespace core
             : electromag{dict["electromag"]}
             , ions{dict["ions"]}
             , J{"J", HybridQuantity::Vector::J}
-            , electrons{dict["electrons"], StandardHybridElectronFluxComputer<Ions>(ions, J), electromag.B}
+            , electrons{dict["electrons"], StandardHybridElectronFluxComputer<Ions>(ions, J),
+                        electromag.B}
         {
         }
 
@@ -60,16 +61,11 @@ namespace core
         //                  start the ResourcesUser interface
         //-------------------------------------------------------------------------
 
-        NO_DISCARD bool isUsable() const
-        {
-            return electromag.isUsable() and ions.isUsable() && J.isUsable() && electrons.isUsable();
-        }
-
-
+        NO_DISCARD bool isUsable() const { return core::isUsable(electromag, ions, J, electrons); }
 
         NO_DISCARD bool isSettable() const
         {
-            return electromag.isSettable() and ions.isSettable() && J.isSettable() && electrons.isSettable();
+            return core::isSettable(electromag, ions, J, electrons);
         }
 
 

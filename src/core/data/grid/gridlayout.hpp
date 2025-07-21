@@ -193,7 +193,6 @@ namespace core
         NO_DISCARD auto const& AMRBox() const { return AMRBox_; }
 
 
-
         NO_DISCARD static std::size_t constexpr nbrParticleGhosts()
         {
             return ghostWidthForParticles<interp_order>();
@@ -631,7 +630,7 @@ namespace core
          * if 'operand' is primal, the derivative is at the dual 'index' location
          */
         template<auto direction, typename Field>
-        NO_DISCARD auto deriv(Field const& operand, MeshIndex<Field::dimension> index)
+        NO_DISCARD auto deriv(Field const& operand, MeshIndex<Field::dimension> index) const
         {
             auto fieldCentering = centering(operand.physicalQuantity());
             using PHARE::core::dirX;
@@ -762,7 +761,7 @@ namespace core
          * on the dimensionality of the GridLayout.
          */
         template<typename Field>
-        NO_DISCARD auto laplacian(Field const& operand, MeshIndex<Field::dimension> index)
+        NO_DISCARD auto laplacian(Field const& operand, MeshIndex<Field::dimension> index) const
         {
             static_assert(Field::dimension == dimension,
                           "field dimension must be equal to gridlayout dimension");
@@ -1393,12 +1392,17 @@ namespace core
 
         /**
          * @brief nbrDualGhosts_ returns the number of ghost nodes on each side for dual quantities.
-         * The formula is based only on the interpolation order, whch means only particle-mesh
-         * interactions constrain the number of dual ghost nodes.
+         * It is obtained using the required number of ghost for the interpolation ((interp_order +
+         * 1) / 2), to which we add one for the patchghost for particles that may leave the cells,
+         * and we then take the closest even number. This is because we are using the Toth and Roe
+         * (2002) formulas for magnetic refinement, so we want to have on refinement full coarse
+         * cell below the fine grid, which odd number of ghost nodes would not allow.
          */
         NO_DISCARD std::uint32_t constexpr static nbrDualGhosts_()
         {
-            return (interp_order + 1) / 2 + nbrParticleGhosts();
+            static_assert(interp_order > 0 and interp_order < 4);
+            constexpr auto ghosts = std::array{2, 4, 4};
+            return ghosts[interp_order - 1];
         }
 
 
