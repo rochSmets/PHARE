@@ -98,7 +98,7 @@ namespace solver
                     core::depositParticles(ions, layout, interpolate_, core::LevelGhostDeposit{});
                 }
 
-                ions.computeDensity();
+                ions.computeChargeDensity();
                 ions.computeBulkVelocity();
             }
 
@@ -143,7 +143,7 @@ namespace solver
                         auto layout = PHARE::amr::layoutFromPatch<GridLayoutT>(*patch);
                         auto _
                             = hybridModel.resourcesManager->setOnPatch(*patch, B, E, J, electrons);
-                        electrons.update(layout);
+                        electrons.update(layout, 0.0);  // TODO needs the time step, not 0.0 ! we just have initDataTime
                         auto& Ve = electrons.velocity();
                         auto& Ne = electrons.density();
                         auto& Pe = electrons.pressure();

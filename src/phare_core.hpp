@@ -54,7 +54,8 @@ struct PHARE_Types
     using IonPopulation_t
         = PHARE::core::IonPopulation<ParticleArray_t, VecField_t, SymTensorField_t>;
     using Ions_t      = PHARE::core::Ions<IonPopulation_t, GridLayout_t>;
-    using Electrons_t = PHARE::core::Electrons<Ions_t>;
+    using StandardHybridElectronFluxComputer_t = StandardHybridElectronFluxComputer<Ions_t>;
+    using Electrons_t = PHARE::core::Electrons<StandardHybridElectronFluxComputer_t>;
 
     using ParticleInitializerFactory
         = PHARE::core::ParticleInitializerFactory<ParticleArray_t, GridLayout_t>;

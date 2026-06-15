@@ -11,7 +11,16 @@
 
 namespace PHARE::core
 {
-template<typename T, typename SIZE = size_t>
+
+template<typename T>
+concept Spannable = requires(T t) {
+    { t.size() };
+    { t.data() };
+};
+
+
+template<typename T, typename SIZE = std::size_t>
+
 struct Span
 {
     using value_type = T;
@@ -28,7 +37,7 @@ struct Span
 };
 
 
-template<typename T, typename SIZE = size_t>
+template<typename T, typename SIZE = std::size_t>
 class VectorSpan : private StackVar<std::vector<T>>, public core::Span<T, SIZE>
 {
     using Vector = StackVar<std::vector<T>>;
@@ -54,7 +63,7 @@ public:
 
 
 
-template<typename T, typename SIZE = size_t>
+template<typename T, typename SIZE = std::size_t>
 struct SpanSet
 {
     using value_type = T;

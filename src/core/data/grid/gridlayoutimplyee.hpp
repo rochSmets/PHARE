@@ -67,47 +67,47 @@ namespace core
          */
         constexpr auto static initLayoutCentering_()
         {
-            const gridDataT data{};
-            const std::array<QtyCentering, NBR_COMPO> Bx = {{data.primal, data.dual, data.dual}};
-            const std::array<QtyCentering, NBR_COMPO> By = {{data.dual, data.primal, data.dual}};
-            const std::array<QtyCentering, NBR_COMPO> Bz = {{data.dual, data.dual, data.primal}};
+            gridDataT const data{};
+            std::array<QtyCentering, NBR_COMPO> const Bx = {{data.primal, data.dual, data.dual}};
+            std::array<QtyCentering, NBR_COMPO> const By = {{data.dual, data.primal, data.dual}};
+            std::array<QtyCentering, NBR_COMPO> const Bz = {{data.dual, data.dual, data.primal}};
 
-            const std::array<QtyCentering, NBR_COMPO> Ex = {{data.dual, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Ey = {{data.primal, data.dual, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Ez = {{data.primal, data.primal, data.dual}};
+            std::array<QtyCentering, NBR_COMPO> const Ex = {{data.dual, data.primal, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Ey = {{data.primal, data.dual, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Ez = {{data.primal, data.primal, data.dual}};
 
 
-            const std::array<QtyCentering, NBR_COMPO> Jx = {{data.dual, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Jy = {{data.primal, data.dual, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Jz = {{data.primal, data.primal, data.dual}};
+            std::array<QtyCentering, NBR_COMPO> const Jx = {{data.dual, data.primal, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Jy = {{data.primal, data.dual, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Jz = {{data.primal, data.primal, data.dual}};
 
-            const std::array<QtyCentering, NBR_COMPO> Rho
-                = {{data.primal, data.primal, data.primal}};
-
-            const std::array<QtyCentering, NBR_COMPO> Vx
-                = {{data.primal, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Vy
-                = {{data.primal, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Vz
+            std::array<QtyCentering, NBR_COMPO> const Rho
                 = {{data.primal, data.primal, data.primal}};
 
-            const std::array<QtyCentering, NBR_COMPO> Mxx
+            std::array<QtyCentering, NBR_COMPO> const Vx
                 = {{data.primal, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Mxy
+            std::array<QtyCentering, NBR_COMPO> const Vy
                 = {{data.primal, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Mxz
-                = {{data.primal, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Myy
-                = {{data.primal, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Myz
-                = {{data.primal, data.primal, data.primal}};
-            const std::array<QtyCentering, NBR_COMPO> Mzz
+            std::array<QtyCentering, NBR_COMPO> const Vz
                 = {{data.primal, data.primal, data.primal}};
 
-            const std::array<QtyCentering, NBR_COMPO> P = {{data.primal, data.primal, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Mxx
+                = {{data.primal, data.primal, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Mxy
+                = {{data.primal, data.primal, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Mxz
+                = {{data.primal, data.primal, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Myy
+                = {{data.primal, data.primal, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Myz
+                = {{data.primal, data.primal, data.primal}};
+            std::array<QtyCentering, NBR_COMPO> const Mzz
+                = {{data.primal, data.primal, data.primal}};
 
-            const std::array<std::array<QtyCentering, NBR_COMPO>,
-                             static_cast<std::size_t>(HybridQuantity::Scalar::count)>
+            std::array<QtyCentering, NBR_COMPO> const P = {{data.primal, data.primal, data.primal}};
+
+            std::array<std::array<QtyCentering, NBR_COMPO>,
+                       static_cast<std::size_t>(HybridQuantity::Scalar::count)> const
                 hybridQtyCentering{Bx, By, Bz, Ex, Ey,  Ez,  Jx,  Jy,  Jz,  Rho,
                                    Vx, Vy, Vz, P,  Mxx, Mxy, Mxz, Myy, Myz, Mzz};
 
@@ -118,11 +118,11 @@ namespace core
 
 
         //! says for each HybridQuantity::Quantity whether it is primal or dual, in each direction
-        constexpr const static std::array<std::array<QtyCentering, NBR_COMPO>,
-                                          static_cast<std::size_t>(HybridQuantity::Scalar::count)>
+        constexpr static std::array<std::array<QtyCentering, NBR_COMPO>,
+                                    static_cast<std::size_t>(HybridQuantity::Scalar::count)> const
             hybridQtyCentering_{initLayoutCentering_()};
 
-        static const std::size_t dim_{dim};
+        static std::size_t const dim_{dim};
 
         // ------------------------------------------------------------------------
         //                          PUBLIC INTERFACE
@@ -339,7 +339,6 @@ namespace core
 
 
 
-
         NO_DISCARD constexpr static std::array<std::array<QtyCentering, dim>, 3>
         centering(HybridQuantity::Vector hybridQuantity)
         {
@@ -406,6 +405,43 @@ namespace core
             else if constexpr (interp_order == 3)
                 return -1;
                 */
+        }
+
+
+
+
+        NO_DISCARD auto static constexpr fullPrimalToFullDual()
+        {
+            auto constexpr iShift = primalToDual();
+
+            // P1 is always on top of Ex so no shift
+
+            if constexpr (dimension == 1)
+            {
+                constexpr WeightPoint<dimension> P1{Point<int, dimension>{0}, 0.5};
+                constexpr WeightPoint<dimension> P2{Point<int, dimension>{iShift}, 0.5};
+                return std::array<WeightPoint<dimension>, 2>{P1, P2};
+            }
+            else if constexpr (dimension == 2)
+            {
+                constexpr WeightPoint<dimension> P1{Point<int, dimension>{0, 0}, 0.25};
+                constexpr WeightPoint<dimension> P2{Point<int, dimension>{0, iShift}, 0.25};
+                constexpr WeightPoint<dimension> P3{Point<int, dimension>{iShift, 0}, 0.25};
+                constexpr WeightPoint<dimension> P4{Point<int, dimension>{iShift, iShift}, 0.25};
+                return std::array<WeightPoint<dimension>, 4>{P1, P2, P3, P4};
+            }
+            else if constexpr (dimension == 3)
+            {
+                constexpr WeightPoint<dimension> P1{Point<int, dimension>{iShift, iShift, iShift}, 0.125};
+                constexpr WeightPoint<dimension> P2{Point<int, dimension>{iShift, iShift, iShift}, 0.125};
+                constexpr WeightPoint<dimension> P3{Point<int, dimension>{iShift, iShift, iShift}, 0.125};
+                constexpr WeightPoint<dimension> P4{Point<int, dimension>{iShift, iShift, iShift}, 0.125};
+                constexpr WeightPoint<dimension> P5{Point<int, dimension>{iShift, iShift, iShift}, 0.125};
+                constexpr WeightPoint<dimension> P6{Point<int, dimension>{iShift, iShift, iShift}, 0.125};
+                constexpr WeightPoint<dimension> P7{Point<int, dimension>{iShift, iShift, iShift}, 0.125};
+                constexpr WeightPoint<dimension> P8{Point<int, dimension>{iShift, iShift, iShift}, 0.125};
+                return std::array<WeightPoint<dimension>, 8>{P1, P2, P3, P4, P5, P6, P7, P8};
+            }
         }
 
 

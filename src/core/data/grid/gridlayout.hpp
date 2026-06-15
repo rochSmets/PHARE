@@ -193,7 +193,6 @@ namespace core
         NO_DISCARD auto const& AMRBox() const { return AMRBox_; }
 
 
-
         NO_DISCARD static std::size_t constexpr nbrParticleGhosts()
         {
             return ghostWidthForParticles<interp_order>();
@@ -626,9 +625,12 @@ namespace core
          * at a multidimensional index and in a given direction.
          * The function can perform 1D, 2D and 3D 1st order derivatives, depending
          * on the dimensionality of the GridLayout.
+         * This function then gives a derivative value at 'index' which centering
+         * is the opposite of the centering of 'operand'
+         * if 'operand' is primal, the derivative is at the dual 'index' location
          */
         template<auto direction, typename Field>
-        NO_DISCARD auto deriv(Field const& operand, MeshIndex<Field::dimension> index)
+        NO_DISCARD auto deriv(Field const& operand, MeshIndex<Field::dimension> index) const
         {
             auto fieldCentering = centering(operand.physicalQuantity());
             using PHARE::core::dirX;
@@ -689,13 +691,77 @@ namespace core
         }
 
 
+        /** @brief returns the local 1st order derivative of the Field operand
+         * at a multidimensional index and in a given direction.
+         * The function can perform 1D, 2D and 3D 1st order derivatives, depending
+         * on the dimensionality of the GridLayout.
+         * This function then gives a derivative value at 'index' which centering
+         * is the same as the centering of 'operand'
+         * if 'operand' is primal, the derivative is at the primal 'index' location
+         */
+        template<auto direction, typename Field>
+        NO_DISCARD auto derivOnSameCentering(Field const& operand, MeshIndex<Field::dimension> index)
+        {
+            auto fieldCentering = centering(operand.physicalQuantity());
+            using PHARE::core::dirX;
+            using PHARE::core::dirY;
+            using PHARE::core::dirZ;
+
+            if constexpr (Field::dimension == 1)
+            {
+                auto next = operand(index[0] + 1);
+                auto prev = operand(index[0] - 1);
+                return 0.5 * inverseMeshSize_[dirX] * (next - prev);
+            }
+
+            else if constexpr (Field::dimension == 2)
+            {
+                if constexpr (direction == Direction::X)
+                {
+                    auto next = operand(index[0] + 1, index[1]);
+                    auto prev = operand(index[0] - 1, index[1]);
+                    return 0.5 * inverseMeshSize_[dirX] * (next - prev);
+                }
+
+                else if constexpr (direction == Direction::Y)
+                {
+                    auto next = operand(index[0], index[1] + 1);
+                    auto prev = operand(index[0], index[1] - 1);
+                    return 0.5 * inverseMeshSize_[dirY] * (next - prev);
+                }
+            }
+            else if constexpr (Field::dimension == 3)
+            {
+                if constexpr (direction == Direction::X)
+                {
+                    auto next = operand(index[0] + 1, index[1], index[2]);
+                    auto prev = operand(index[0] - 1, index[1], index[2]);
+                    return 0.5 * inverseMeshSize_[dirX] * (next - prev);
+                }
+
+                else if constexpr (direction == Direction::Y)
+                {
+                    auto next = operand(index[0], index[1] + 1, index[2]);
+                    auto prev = operand(index[0], index[1] - 1, index[2]);
+                    return 0.5 * inverseMeshSize_[dirY] * (next - prev);
+                }
+                else if constexpr (direction == Direction::Z)
+                {
+                    auto next = operand(index[0], index[1], index[2] + 1);
+                    auto prev = operand(index[0], index[1], index[2] - 1);
+                    return 0.5 * inverseMeshSize_[dirZ] * (next - prev);
+                }
+            }
+        }
+
+
         /** @brief returns the local laplacian of the Field operand
          * at a multidimensional index.
          * The function can perform 1D, 2D and 3D laplacian, depending
          * on the dimensionality of the GridLayout.
          */
         template<typename Field>
-        NO_DISCARD auto laplacian(Field const& operand, MeshIndex<Field::dimension> index)
+        NO_DISCARD auto laplacian(Field const& operand, MeshIndex<Field::dimension> index) const
         {
             static_assert(Field::dimension == dimension,
                           "field dimension must be equal to gridlayout dimension");
@@ -1013,6 +1079,13 @@ namespace core
          * @brief momentsToEx return the indexes and associated coef to compute the linear
          * interpolation necessary to project moments onto Ex.
          */
+        NO_DISCARD auto static constexpr fullPrimalToFullDual() { return GridLayoutImpl::fullPrimalToFullDual(); }
+
+
+        /**
+         * @brief momentsToEx return the indexes and associated coef to compute the linear
+         * interpolation necessary to project moments onto Ex.
+         */
         NO_DISCARD auto static constexpr momentsToEx() { return GridLayoutImpl::momentsToEx(); }
 
 
@@ -1319,12 +1392,17 @@ namespace core
 
         /**
          * @brief nbrDualGhosts_ returns the number of ghost nodes on each side for dual quantities.
-         * The formula is based only on the interpolation order, whch means only particle-mesh
-         * interactions constrain the number of dual ghost nodes.
+         * It is obtained using the required number of ghost for the interpolation ((interp_order +
+         * 1) / 2), to which we add one for the patchghost for particles that may leave the cells,
+         * and we then take the closest even number. This is because we are using the Toth and Roe
+         * (2002) formulas for magnetic refinement, so we want to have on refinement full coarse
+         * cell below the fine grid, which odd number of ghost nodes would not allow.
          */
         NO_DISCARD std::uint32_t constexpr static nbrDualGhosts_()
         {
-            return (interp_order + 1) / 2 + nbrParticleGhosts();
+            static_assert(interp_order > 0 and interp_order < 4);
+            constexpr auto ghosts = std::array{2, 4, 4};
+            return ghosts[interp_order - 1];
         }
 
 

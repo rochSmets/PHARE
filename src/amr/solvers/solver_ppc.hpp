@@ -310,8 +310,9 @@ void SolverPPC<HybridModel, AMR_Types>::predictor1_(level_t& level, ModelViews_t
 
     {
         PHARE_LOG_SCOPE(1, "SolverPPC::predictor1_.ohm");
+        auto dt = newTime - currentTime;
         for (auto& state : views)
-            state.electrons.update(state.layout);
+            state.electrons.update(state.layout, dt);
         ohm_(views.layouts, views.N, views.Ve, views.Pe, views.electromagPred_B, views.J,
              views.electromagPred_E);
         setTime([](auto& state) -> auto& { return state.electromagPred.E; });
@@ -345,8 +346,9 @@ void SolverPPC<HybridModel, AMR_Types>::predictor2_(level_t& level, ModelViews_t
 
     {
         PHARE_LOG_SCOPE(1, "SolverPPC::predictor2_.ohm");
+        auto dt = newTime - currentTime;
         for (auto& state : views)
-            state.electrons.update(state.layout);
+            state.electrons.update(state.layout, dt);
         ohm_(views.layouts, views.N, views.Ve, views.Pe, views.electromagPred_B, views.J,
              views.electromagPred_E);
         setTime([](auto& state) -> auto& { return state.electromagPred.E; });
@@ -382,8 +384,9 @@ void SolverPPC<HybridModel, AMR_Types>::corrector_(level_t& level, ModelViews_t&
 
     {
         PHARE_LOG_SCOPE(1, "SolverPPC::corrector_.ohm");
+        auto dt = newTime - currentTime;
         for (auto& state : views)
-            state.electrons.update(state.layout);
+            state.electrons.update(state.layout, dt);
         ohm_(views.layouts, views.N, views.Ve, views.Pe, views.electromag_B, views.J,
              views.electromag_E);
         setTime([](auto& state) -> auto& { return state.electromag.E; });

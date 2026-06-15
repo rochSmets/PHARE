@@ -20,6 +20,8 @@ from .simulation import (
     deserialize as deserialize_sim,
 )
 from .load_balancer import LoadBalancer
+from typing import Callable
+
 
 __all__ = [
     "UniformModel",
@@ -407,8 +409,22 @@ def populateDict():
     if simulation.electrons is None:
         raise RuntimeError("Error - no electrons registered to this Simulation")
     else:
+        # print(type(simulation.electrons.dict_path()))
+        # print(simulation.electrons.dict_path())
+        # for item in simulation.electrons.dict_path():
+        #     if (item[0] == 'electrons/pressure_closure/name/'):
+        #         name_ = item[1]
+        # if name_ == 'isothermal':
+        #     pass
+        # if name_ == 'polytropic':
+        #     pass
+
         for item in simulation.electrons.dict_path():
             if isinstance(item[1], str):
                 add_string("simulation/" + item[0], item[1])
-            else:
+            elif isinstance(item[1], float):
                 add_double("simulation/" + item[0], item[1])
+            elif isinstance(item[1], Callable):
+                addInitFunction("simulation/" + item[0], fn_wrapper(item[1]))
+            else:
+                raise ValueError(f"acceptable entries should be int, float or collable")
