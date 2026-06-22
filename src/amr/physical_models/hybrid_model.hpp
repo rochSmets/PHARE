@@ -124,19 +124,15 @@ template<typename GridLayoutT, typename Electromag, typename Ions, typename Elec
 void HybridModel<GridLayoutT, Electromag, Ions, Electrons, AMR_Types, Grid_t>::initialize(
     level_t& level)
 {
-    for (auto& patch : level)
+    auto& rm = *this->resourcesManager;
+    for (auto& patch : rm.enumerate(level, state))
     {
-        // first initialize the ions
-        auto layout = amr::layoutFromPatch<gridlayout_type>(*patch);
-        auto& ions  = state.ions;
-        auto _ = this->resourcesManager->setOnPatch(*patch, state.electromag, state.ions, state.J);
+        auto const layout = amr::layoutFromPatch<gridlayout_type>(*patch);
 
-        for (auto& pop : ions)
-        {
-            auto const& info         = pop.particleInitializerInfo();
-            auto particleInitializer = ParticleInitializerFactory::create(info);
-            particleInitializer->loadParticles(pop.domainParticles(), layout);
-        }
+        for (auto& pop : state.ions)
+            ParticleInitializerFactory::create(pop.particleInitializerInfo())
+                ->loadParticles(pop.domainParticles(), layout);
+
 
         state.electrons.initialize(layout);
         state.electromag.initialize(layout);
