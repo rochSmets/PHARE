@@ -305,12 +305,19 @@ public:
 
         this->dt_ = dt;
 
-        layout.evalOnBox(Te, [&](auto&... ijk) mutable { P_Eq_(layout, V_, Te, ijk...); });
+        layout.evalOnBox(Te, [&](auto&... ijk) mutable { T_Eq_(layout, V_, Te, ijk...); });
 
 
-        // std::transform(std::begin(Ne_), std::end(Ne_), std::begin(this->Pe_),
-        //                [this](auto n) { return n * 0.1; });  // TODO utiliser autre chose que
-        //                transform et aller chercher Tnew
+
+
+        // std::transform(std::begin(N_), std::end(N_), std::begin(Te), std::begin(this->Pe_),
+        //                [this](auto n, auto T) { return n * T; });
+        std::transform(N_.begin(), N_.end(), Te.begin(), this->Pe_.begin(),
+                       [this](auto n, auto T) { return n * T; });
+
+
+
+
     }
 
 private:
@@ -321,7 +328,7 @@ private:
 
 
     template<typename Field, typename VecField>
-    void P_Eq_(GridLayout const& layout, VecField const& Ve, Field const& Te, auto&... ijk) const
+    void T_Eq_(GridLayout const& layout, VecField const& Ve, Field const& Te, auto&... ijk) const
     {
         Te(ijk...)
             = Te(ijk...)
@@ -504,12 +511,9 @@ public:
 
     NO_DISCARD bool isUsable() const
     {
-        // return fluxComput_.isUsable() and pressureClosure_->isUsable();
         return fluxComput_.isUsable() /*and B_.isUsable()*/ and pressureClosure_->isUsable();
     }
 
-    // NO_DISCARD bool isSettable() const { return fluxComput_.isSettable(); }  // TODO
-    // pressureClosure needs also to be settable ?
     NO_DISCARD bool isSettable() const
     {
         return fluxComput_.isSettable() /*and B_.isSettable()*/ and pressureClosure_->isSettable();
@@ -517,13 +521,11 @@ public:
 
     NO_DISCARD auto getCompileTimeResourcesViewList() const
     {
-        // return std::forward_as_tuple(fluxComput_, *pressureClosure_);
         return std::forward_as_tuple(fluxComput_, *pressureClosure_);
     }
 
     NO_DISCARD auto getCompileTimeResourcesViewList()
     {
-        // return std::forward_as_tuple(fluxComput_, *pressureClosure_);
         return std::forward_as_tuple(fluxComput_, *pressureClosure_);
     }
 
@@ -551,7 +553,7 @@ public:
 private:
     initializer::PHAREDict dict_;
     FluxComputer fluxComput_;
-    VecField B_; // NOT USED HERE!
+    VecField B_;  // needed for CGL
     std::unique_ptr<ElectronPressureClosure<FluxComputer>> pressureClosure_;
 };
 
