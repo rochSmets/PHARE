@@ -31,6 +31,7 @@ if (test AND ${PHARE_EXEC_LEVEL_MIN} GREATER 0) # 0 = no tests
   add_subdirectory(tests/core/numerics/ampere)
   add_subdirectory(tests/core/numerics/faraday)
   add_subdirectory(tests/core/numerics/ohm)
+  add_subdirectory(tests/core/numerics/vacuum_ampere_relax)
   add_subdirectory(tests/core/numerics/ion_updater)
 
 

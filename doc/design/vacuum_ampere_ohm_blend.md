@@ -107,6 +107,29 @@ Limits:
 - `lambda -> 0` (vacuum): `w -> 1`, `h -> 1`
   => `E_new = E_old + dt * c_eff^2 * curl(B)` — the explicit leapfrog
   vacuum-Ampère update.
+
+Note this is asymptotic, not step-function: for any *finite* `g`, there
+is a residual vacuum-source leakage into the dense-plasma answer,
+`E_new - E_Ohm ~ h(g) * dt * c_eff^2 * curl(B) ~ dt * c_eff^2 * curl(B) / g`
+for large `g` (confirmed numerically: the deviation from `E_Ohm` scales
+as exactly `1/g`). This means how "dense" is dense enough in practice
+depends on the chosen `c_eff` too — a larger `c_eff` needs a
+correspondingly larger `g` (i.e. `n0`/`p`) to keep this residual
+negligible relative to `E_Ohm`'s own scale. Not a flaw, but a coupling
+between parameters worth keeping in mind when picking `n0`, `p`, `c_eff`
+together, and something the standalone ODE unit test checks explicitly
+(section 8.3) rather than asserting exact recovery at finite `g`.
+
+**Numerical hazard distinct from the analytic limit:** the "vacuum limit
+is protected against a bad `E_Ohm`" argument (section 4.3) only holds if
+`E_Ohm` is *finite*, even if huge. If `E_Ohm` ever actually evaluates to
+`NaN`/`Inf` (e.g. a genuine `x/0` if density is not floored at exactly
+`n=0`), then `(1-w) * E_Ohm = 0 * NaN = NaN` in IEEE floating point —
+the weight does **not** save you, despite the correct exact-arithmetic
+limit. This makes flooring `n` inside Ohm's law's singular terms
+(section 4.3) a **hard correctness requirement**, not an optional
+safety margin. Confirmed and encoded as a unit test in section 8.3's
+implementation.
 - In between: one smooth formula, no branching.
 
 This scheme is **unconditionally stable in lambda**: however stiff the
@@ -347,3 +370,25 @@ prototyping order — most likely: (a) the standalone scalar ODE test
 1D toy density-ramp problem exercising the full blend without AMR
 subcycling, then (c) wiring into the real solver plus the AMR tagging
 piece for subcycling.
+
+### Progress
+
+- **(a) done.** `src/core/numerics/ohm/vacuum_ampere_relax.hpp` implements
+  the scalar closed form from section 4.1 (`VacuumAmpereRelax`), and
+  `tests/core/numerics/vacuum_ampere_relax/test_main.cpp` validates it:
+  exact recovery of the vacuum update at `n=0` even with a huge-but-
+  finite poisoned `E_Ohm`; explicit confirmation that a `NaN`/`Inf`
+  `E_Ohm` still poisons the result at `n=0` (the numerical hazard from
+  the section 4.1 addendum); the `1/g` scaling of the dense-limit
+  residual; agreement with a brute-force fine-stepped Euler integration
+  of the same ODE; and a direct comparison of the recommended
+  `g(n)=(n/n0)^2` falloff against the physically-tempting-but-wrong
+  `lambda ~ sqrt(n)`, showing the latter fails to suppress the `1/n`
+  Ohm's-law singularity as `n -> 0` while the former does (section 4.2's
+  pitfall). Registered in the build via
+  `res/cmake/test.cmake`.
+- Not yet done: the density floor inside `ideal_()`/`pressure_()` in
+  `ohm.hpp` (section 4.3) — still needed before this component is wired
+  into anything real, since the unit tests above show the blend alone
+  does not protect against a genuinely non-finite `E_Ohm`.
+- Next: (b), the 1D toy density-ramp problem.
