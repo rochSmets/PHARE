@@ -391,4 +391,66 @@ piece for subcycling.
   `ohm.hpp` (section 4.3) — still needed before this component is wired
   into anything real, since the unit tests above show the blend alone
   does not protect against a genuinely non-finite `E_Ohm`.
-- Next: (b), the 1D toy density-ramp problem.
+
+- **(b) done.** `doc/design/prototypes/vacuum_ampere_blend_1d.py` +
+  `run_scenarios.py`: a 1D (Yee-staggered, periodic) toy with a
+  Hall-term-only Ohm's law (`Ve = -J/(n_floored e)`, immobile ions —
+  chosen specifically to reproduce the real `1/n` Hall singularity, not
+  a watered-down model) and the `VacuumAmpereRelax` blend. Three
+  scenarios all pass: uniform dense plasma matches plain Ohm's law to
+  1.4e-5 relative; uniform vacuum wave speed matches `c_eff*k` to 0.26%;
+  a wave packet crossing a dense-vacuum-dense trench (n: 1 -> 1e-3)
+  stays bounded for the full ~670k-step crossing, with a plausible
+  ~57/43 transmitted/reflected energy split. Full report with plots:
+  see the artifact linked from this session, or regenerate via
+  `run_scenarios.py` + the plotting snippet in the session transcript.
+
+  Getting scenario C to pass surfaced three numerical findings that are
+  **about the toy's own time integration, not about the blend formula**,
+  but are worth keeping since they'll matter again in step (c):
+
+  1. A naive single-substep sequential update (E fully from current B,
+     then B fully from that new E — regardless of which is computed
+     first) is *unconditionally, weakly unstable* for the bare
+     Hall/whistler rotation, at every wavenumber. Confirmed both
+     analytically (its single-mode transfer matrix has eigenvalues
+     `1 +- i*Omega`, magnitude `sqrt(1+Omega^2) > 1` for any nonzero
+     `Omega`) and empirically (a real, if slow-onset, exponential
+     blow-up — a high-accuracy exact-time-integration reference
+     confirmed the *spatial* discretization itself is fine, isolating
+     the bug to time-stepping). This is presumably why real PHARE's
+     predictor-corrector substep structure is load-bearing for this
+     term and not just an accuracy nicety — a single bare substep
+     seems to not be enough.
+  2. The fix is standard single-level Yee time-staggering (advance B
+     using the current E, then E using the just-updated B) — verified
+     to have exactly as many eigenvalues as physical degrees of freedom
+     (no spurious extra mode, unlike a 2-time-level leapfrog-for-B
+     variant that was tried and discarded), magnitude-1 stability for
+     the algebraic/dense limit, and vacuum dispersion matching analytic
+     to ~0.01% in a single-mode check. The residual (very weak)
+     Hall-term growth this leaves is fully controlled by a *small*
+     hyper-resistive term matching `ohm.hpp`'s existing
+     `constant_hyperresistive_` (`nu=1e-4` was enough here) — meaning
+     that term is apparently numerically load-bearing for explicit
+     whistler integration, not only a physics nicety.
+  3. Independent of both of the above: a too-sharp density gradient is
+     *itself* a source of numerical instability (a trench ramp resolved
+     by only ~20 cells reliably blew up regardless of the fixes above,
+     even at a much shallower density contrast; widening the ramp to
+     ~100 cells fixed it completely at the *original* deep contrast).
+     This directly reinforces section 6's plan to spatially refine the
+     transition band — not only for the `c_eff` CFL, but to adequately
+     resolve the density gradient itself.
+
+  None of this changes the blend formula (section 4.1) or its
+  parameters — it's entirely about what the surrounding field solver
+  needs to look like for the blend to be exercised fairly on a grid.
+  `vacuum_ampere_relax.hpp` and its unit tests are unaffected.
+
+- Next: (c), wiring into the real solver plus the AMR tagging piece for
+  subcycling — including finally adding the `ohm.hpp` density floor
+  from section 4.3, and deciding whether PHARE's existing
+  predictor-corrector substep structure already provides the
+  time-staggering finding (1) above needs, or whether the relax step's
+  placement needs adjusting.
