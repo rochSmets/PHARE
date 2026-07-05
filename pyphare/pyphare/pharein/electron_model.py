@@ -26,10 +26,14 @@ class ElectronModel(object):
         else:
             self.closure = None
 
+        self.min_density = kwargs.get("min_density", 0.0)
+        if self.min_density < 0.0:
+            raise ValueError("Error: min_density should not be negative")
+
         global_vars.sim.set_electrons(self)
 
     def dict_path(self):
         return [
             ("electrons/pressure_closure/" + k, v)
             for k, v in self.closure.dict_path().items()
-        ]
+        ] + [("electrons/min_density", self.min_density)]

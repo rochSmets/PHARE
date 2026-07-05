@@ -15,6 +15,7 @@ def populateDict(sim):
     add_double("simulation/algo/ohm/resistivity", sim.resistivity)
     add_double("simulation/algo/ohm/hyper_resistivity", sim.hyper_resistivity)
     add_string("simulation/algo/ohm/hyper_mode", sim.hyper_mode)
+    add_double("simulation/algo/ohm/min_density", sim.min_density)
 
     init_model = sim.model
     modelDict = init_model.model_dict

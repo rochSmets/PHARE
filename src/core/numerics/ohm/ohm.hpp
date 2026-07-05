@@ -8,6 +8,8 @@
 
 #include "initializer/data_provider.hpp"
 
+#include <algorithm>
+
 
 namespace PHARE::core
 {
@@ -19,6 +21,7 @@ struct OhmInfo
     double const eta;
     double const nu;
     HyperMode const hyper_mode;
+    double const min_density;
 
     OhmInfo static FROM(initializer::PHAREDict const& dict)
     {
@@ -26,7 +29,8 @@ struct OhmInfo
                 dict["hyper_resistivity"].template to<double>(),
                 cppdict::get_value(dict, "hyper_mode", std::string{"constant"}) == "constant"
                     ? HyperMode::constant
-                    : HyperMode::spatial};
+                    : HyperMode::spatial,
+                cppdict::get_value(dict, "min_density", 0.0)};
     }
 };
 
@@ -147,7 +151,8 @@ private:
     {
         if constexpr (component == Component::X)
         {
-            auto const nOnEx = GridLayout::template project<GridLayout::momentsToEx>(n, index);
+            auto const nOnEx = std::max(
+                GridLayout::template project<GridLayout::momentsToEx>(n, index), min_density);
 
             auto gradPOnEx = layout_.template deriv<Direction::X>(Pe, index); // TODO : issue 3391
 
@@ -158,7 +163,8 @@ private:
         {
             if constexpr (Field::dimension >= 2)
             {
-                auto const nOnEy = GridLayout::template project<GridLayout::momentsToEy>(n, index);
+                auto const nOnEy = std::max(
+                    GridLayout::template project<GridLayout::momentsToEy>(n, index), min_density);
 
                 auto gradPOnEy
                     = layout_.template deriv<Direction::Y>(Pe, index); // TODO : issue 3391
@@ -175,7 +181,8 @@ private:
         {
             if constexpr (Field::dimension >= 3)
             {
-                auto const nOnEz = GridLayout::template project<GridLayout::momentsToEz>(n, index);
+                auto const nOnEz = std::max(
+                    GridLayout::template project<GridLayout::momentsToEz>(n, index), min_density);
 
                 auto gradPOnEz
                     = layout_.template deriv<Direction::Z>(Pe, index); // TODO : issue 3391

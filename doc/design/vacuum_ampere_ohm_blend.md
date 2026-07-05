@@ -448,9 +448,39 @@ piece for subcycling.
   needs to look like for the blend to be exercised fairly on a grid.
   `vacuum_ampere_relax.hpp` and its unit tests are unaffected.
 
-- Next: (c), wiring into the real solver plus the AMR tagging piece for
-  subcycling — including finally adding the `ohm.hpp` density floor
-  from section 4.3, and deciding whether PHARE's existing
-  predictor-corrector substep structure already provides the
-  time-staggering finding (1) above needs, or whether the relax step's
-  placement needs adjusting.
+- **(c), first slice done: the section 4.3 density floor.** Landed as a
+  new, opt-in (`default = 0.0`, i.e. no behavior change unless set)
+  `min_density` dict parameter in two places, since the singular `1/n`
+  terms turned out to live in two different files:
+  - `ohm.hpp`'s `OhmInfo`/`pressure_()`: floors `n` before dividing in
+    the electron pressure term (`dict["ohm"]["min_density"]` from
+    Python, i.e. `Simulation(..., min_density=...)`).
+  - `electrons.hpp`'s `StandardHybridElectronFluxComputer`: floors `Ne`
+    before dividing in `computeBulkVelocity` — this is the *actual* Hall
+    term singularity (`Ve = Vi - J/(ne)`), which does not live in
+    `ohm.hpp` at all (`ohm.hpp`'s `ideal_()` takes `Ve` as an
+    already-computed input). `dict["electrons"]["min_density"]` from
+    Python, i.e. `ElectronModel(..., min_density=...)`.
+
+  Both wired end-to-end through `pyphare` (`simulation.py`,
+  `electron_model.py`, `initialize/hybrid.py`) with validation
+  (non-negative) matching the existing `resistivity`/`Te` pattern.
+  Verified: `test-ohm` (6/6) and `test-electrons` (45/45) still pass
+  unmodified with the new parameters at their default (no-op) value —
+  built and run locally against a SAMRAI install already cached on this
+  machine, not just compiled in isolation.
+
+  Deliberately *not* done here: unifying this with the pre-existing,
+  unrelated hardcoded `min_density = 0.1` inside `ohm.hpp`'s
+  `spatial_hyperresistive_()` — that's a different, already-working
+  mechanism, out of scope for this change.
+
+- Next: the rest of (c) — the actual `VacuumAmpereRelax` wiring into
+  `solver_ppc.hpp` (currently `Ohm`'s output is used as final `E`
+  directly; needs to become an intermediate `E_Ohm` feeding the relax
+  step, with `E` gaining persistent state across predictor1/predictor2/
+  corrector), plus the AMR density-based tagging piece for subcycling.
+  Still need to decide whether PHARE's existing predictor-corrector
+  substep structure already provides the time-staggering step (b)'s
+  finding (1) needs, or whether the relax step's placement needs
+  adjusting.

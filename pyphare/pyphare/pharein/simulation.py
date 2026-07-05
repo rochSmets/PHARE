@@ -640,6 +640,14 @@ def check_hyper_resistivity(**kwargs):
     return hyper_resistivity, hyper_mode
 
 
+def check_min_density(**kwargs):
+    min_density = kwargs.get("min_density", 0.0)
+    if min_density < 0.0:
+        raise ValueError("Error: min_density should not be negative")
+
+    return min_density
+
+
 def check_clustering(**kwargs):
     valid_keys = ["berger", "tile"]
     clustering = kwargs.get("clustering", "tile")
@@ -729,6 +737,7 @@ def checker(func):
             "resistivity",
             "hyper_resistivity",
             "hyper_mode",
+            "min_density",
             "strict",
             "restart_options",
             "tag_buffer",
@@ -818,6 +827,8 @@ def checker(func):
         nu, hyper_mode = check_hyper_resistivity(**kwargs)
         kwargs["hyper_resistivity"] = nu
         kwargs["hyper_mode"] = hyper_mode
+
+        kwargs["min_density"] = check_min_density(**kwargs)
 
         kwargs["dry_run"] = kwargs.get(
             "dry_run", os.environ.get("PHARE_DRY_RUN", "0") == "1"
@@ -1053,6 +1064,8 @@ class Simulation(object):
         * **strict** (``bool``), turns warnings into errors (default False)
         * **resistivity** (``float``), resistivity value (default=0.0)
         * **hyper-resistivity** (``float``), hyper-resistivity value (default=0.0)
+        * **min_density** (``float``), floor applied to density in Ohm's law's electron
+          pressure term, to avoid dividing by near-zero density (default=0.0, i.e. no floor)
         * **boundary_types** (``str`` or ``tuple``) type of boundary conditions (default is "periodic" for each direction)
 
     """

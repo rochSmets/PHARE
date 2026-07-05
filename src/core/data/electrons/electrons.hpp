@@ -7,6 +7,8 @@
 
 #include "initializer/data_provider.hpp"
 
+#include <algorithm>
+
 
 namespace PHARE::core
 {
@@ -20,10 +22,11 @@ public:
     using Field      = typename Ions::field_type;
     using GridLayout = typename Ions::gridlayout_type;
 
-    StandardHybridElectronFluxComputer(Ions& ions, VecField& J)
+    StandardHybridElectronFluxComputer(Ions& ions, VecField& J, double min_density = 0.0)
         : ions_{ions}
         , J_{J}
         , Ve_{"StandardHybridElectronFluxComputer_Ve", HybridQuantity::Vector::V}
+        , min_density_{min_density}
     {
     }
 
@@ -120,10 +123,11 @@ public:
             auto const JxOnVx = GridLayout::template project<GridLayout::JxToMoments>(Jx, arr);
             auto const JyOnVy = GridLayout::template project<GridLayout::JyToMoments>(Jy, arr);
             auto const JzOnVz = GridLayout::template project<GridLayout::JzToMoments>(Jz, arr);
+            auto const NeOnV  = std::max(Ne(arr), min_density_);
 
-            Vex(arr) = Vix(arr) - JxOnVx / Ne(arr);
-            Vey(arr) = Viy(arr) - JyOnVy / Ne(arr);
-            Vez(arr) = Viz(arr) - JzOnVz / Ne(arr);
+            Vex(arr) = Vix(arr) - JxOnVx / NeOnV;
+            Vey(arr) = Viy(arr) - JyOnVy / NeOnV;
+            Vez(arr) = Viz(arr) - JzOnVz / NeOnV;
         });
     }
 
@@ -134,6 +138,7 @@ private:
     Ions ions_;
     VecField J_;
     VecField Ve_;
+    double const min_density_;
 };
 
 
@@ -230,7 +235,7 @@ class ElectronMomentModel
 
 public:
     ElectronMomentModel(PHARE::initializer::PHAREDict const& dict, Ions& ions, VecField& J)
-        : fluxComput_{ions, J}
+        : fluxComput_{ions, J, cppdict::get_value(dict, "min_density", 0.0)}
         , pressureClosure_{dict["pressure_closure"], fluxComput_.getIons()}
     {
     }
