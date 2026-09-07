@@ -11,8 +11,16 @@
 #include "amr/physical_models/physical_model.hpp"
 #include "amr/messengers/hybrid_messenger_info.hpp"
 #include "amr/resources_manager/resources_manager.hpp"
+#include "amr/data/field/refine/field_refine_operator.hpp"
+#include "amr/data/field/refine/field_refiner.hpp"
+#include "amr/data/field/field_variable_fill_pattern.hpp"
+#include "amr/data/tensorfield/tensor_field_data.hpp"
 
+#include <SAMRAI/xfer/RefineAlgorithm.h>
+#include <SAMRAI/xfer/RefineSchedule.h>
+#include <SAMRAI/hier/PatchHierarchy.h>
 
+#include <map>
 #include <string>
 
 namespace PHARE::solver
@@ -82,6 +90,71 @@ public:
     }
 
 
+    // Ve_/Pe_ are never ghost-communicated between patches (unlike B/E/J/ion
+    // moments in fillMessengerInfo below), even though the pressure closure's
+    // derivOnSameCentering stencils read neighbor cells. Must be called once
+    // per level, after every patch's bulk velocity is computed and before any
+    // patch computes its pressure.
+    //
+    // Needs a real refine operator (not nullptr): on level > 0 a patch's ghost
+    // region can reach into territory only covered by the coarser level,
+    // which needs genuine interpolation, not a same-resolution copy. Needs a
+    // non-overwrite-interior fill pattern so the schedule only touches ghost
+    // cells, not the domain values just computed on this patch.
+    void fillElectronMomentGhosts(int const levelNumber, double const fillTime)
+    {
+        if (!hierarchy_)
+            throw std::runtime_error(
+                "Error - HybridModel::fillElectronMomentGhosts called before setHierarchy()");
+
+        if (not electronGhostAlgoDeclared_)
+        {
+            auto&& [ve_id, pe_id] = resourcesManager->getIDsList(state.electrons.velocity().name(),
+                                                                  state.electrons.pressure().name());
+            veGhostAlgo_.algo_->registerRefine(ve_id, ve_id, ve_id, vecFieldRefineOp_,
+                                               nonOverwriteInteriorTFfillPattern_);
+            peGhostAlgo_.algo_->registerRefine(pe_id, pe_id, pe_id, fieldRefineOp_,
+                                               nonOverwriteInteriorFieldFillPattern_);
+            electronGhostAlgoDeclared_ = true;
+        }
+
+        veGhostAlgo_.getOrCreateSchedule(hierarchy_, levelNumber).fillData(fillTime);
+        peGhostAlgo_.getOrCreateSchedule(hierarchy_, levelNumber).fillData(fillTime);
+    }
+
+    // A brand new level never gets Pe_'s domain cells set at all: unlike Ve_
+    // (recomputed statelessly from ions/J every step, so it self-heals), Pe_
+    // carries genuinely evolved state, like B/E. oldLevel is null when there
+    // is no same-level source yet (initial refinement), or the replaced level
+    // on regrid, whose overlap should be preserved rather than
+    // re-interpolated from the coarser level.
+    void initElectronPressureOnNewLevel(
+        int const levelNumber, double const fillTime,
+        std::shared_ptr<SAMRAI::hier::PatchLevel> const& oldLevel = nullptr)
+    {
+        if (!hierarchy_)
+            throw std::runtime_error(
+                "Error - HybridModel::initElectronPressureOnNewLevel called before setHierarchy()");
+
+        auto&& [pe_id] = resourcesManager->getIDsList(state.electrons.pressure().name());
+
+        SAMRAI::xfer::RefineAlgorithm initAlgo;
+        initAlgo.registerRefine(pe_id, pe_id, pe_id, fieldRefineOp_);
+
+        auto const level = hierarchy_->getPatchLevel(levelNumber);
+        initAlgo.createSchedule(level, oldLevel, levelNumber - 1, hierarchy_)
+            ->fillData(fillTime);
+    }
+
+    // SolverPPC::advanceLevel only gets a bare hierarchy reference; only
+    // HybridLevelInitializer::initialize() has the actual shared_ptr that
+    // SAMRAI's coarse-fine createSchedule() needs, so it's cached here.
+    void setHierarchy(std::shared_ptr<SAMRAI::hier::PatchHierarchy> const& hierarchy)
+    {
+        hierarchy_ = hierarchy;
+    }
+
+
     HybridModel(PHARE::initializer::PHAREDict const& dict,
                 std::shared_ptr<resources_manager_type> const& _resourcesManager)
         : IPhysicalModel<AMR_Types>{model_name}
@@ -110,6 +183,64 @@ public:
     //-------------------------------------------------------------------------
 
     std::unordered_map<std::string, std::shared_ptr<core::NdArrayVector<dimension, int>>> tags;
+
+private:
+    // schedules are cached by level number, but a regrid replaces the
+    // PatchLevel object for that number -- the weak_ptr detects that so a
+    // stale schedule isn't silently reused against a destroyed level.
+    struct GhostFillAlgo
+    {
+        auto& getOrCreateSchedule(std::shared_ptr<SAMRAI::hier::PatchHierarchy> const& hierarchy,
+                                  int const ilvl)
+        {
+            auto const level   = hierarchy->getPatchLevel(ilvl);
+            auto schedule_iter = schedules_.find(ilvl);
+            auto const create_schedule
+                = schedule_iter == schedules_.end() or schedule_iter->second.level.lock() != level;
+
+            if (create_schedule)
+                schedule_iter
+                    = schedules_
+                          .insert_or_assign(
+                              ilvl, Entry{level, algo_->createSchedule(level, ilvl - 1, hierarchy)})
+                          .first;
+
+            return *schedule_iter->second.schedule;
+        }
+
+        struct Entry
+        {
+            std::weak_ptr<SAMRAI::hier::PatchLevel> level; // invalidated if the Level is destroyed
+            std::shared_ptr<SAMRAI::xfer::RefineSchedule> schedule;
+        };
+
+        std::unique_ptr<SAMRAI::xfer::RefineAlgorithm> algo_
+            = std::make_unique<SAMRAI::xfer::RefineAlgorithm>();
+        std::map<int, Entry> schedules_;
+    };
+
+    using VectorFieldData_t = amr::TensorFieldData<1, GridLayoutT, Grid_t, core::HybridQuantity>;
+
+    using DefaultFieldRefineOp_t
+        = amr::FieldRefineOperator<GridLayoutT, Grid_t, amr::DefaultFieldRefiner<dimension>>;
+    using DefaultVecFieldRefineOp_t
+        = amr::VecFieldRefineOperator<VectorFieldData_t, amr::DefaultFieldRefiner<dimension>>;
+
+    std::shared_ptr<SAMRAI::hier::PatchHierarchy> hierarchy_;
+
+    bool electronGhostAlgoDeclared_ = false;
+    GhostFillAlgo veGhostAlgo_;
+    GhostFillAlgo peGhostAlgo_;
+
+    std::shared_ptr<SAMRAI::hier::RefineOperator> fieldRefineOp_
+        = std::make_shared<DefaultFieldRefineOp_t>();
+    std::shared_ptr<SAMRAI::hier::RefineOperator> vecFieldRefineOp_
+        = std::make_shared<DefaultVecFieldRefineOp_t>();
+
+    std::shared_ptr<amr::FieldFillPattern<dimension>> nonOverwriteInteriorFieldFillPattern_
+        = std::make_shared<amr::FieldFillPattern<dimension>>();
+    std::shared_ptr<amr::TensorFieldFillPattern<dimension>> nonOverwriteInteriorTFfillPattern_
+        = std::make_shared<amr::TensorFieldFillPattern<dimension>>();
 };
 
 
@@ -125,20 +256,17 @@ template<typename GridLayoutT, typename Electromag, typename Ions, typename Elec
 void HybridModel<GridLayoutT, Electromag, Ions, Electrons, AMR_Types, Grid_t>::initialize(
     level_t& level)
 {
-    for (auto& patch : level)
+    auto& rm = *this->resourcesManager;
+    for (auto& patch : rm.enumerate(level, state))
     {
-        // first initialize the ions
-        auto layout = amr::layoutFromPatch<gridlayout_type>(*patch);
-        auto& ions  = state.ions;
-        auto _ = this->resourcesManager->setOnPatch(*patch, state.electromag, state.ions, state.J);
+        auto const layout = amr::layoutFromPatch<gridlayout_type>(*patch);
 
-        for (auto& pop : ions)
-        {
-            auto const& info         = pop.particleInitializerInfo();
-            auto particleInitializer = ParticleInitializerFactory::create(info);
-            particleInitializer->loadParticles(pop.domainParticles(), layout);
-        }
+        for (auto& pop : state.ions)
+            ParticleInitializerFactory::create(pop.particleInitializerInfo())
+                ->loadParticles(pop.domainParticles(), layout);
 
+
+        state.electrons.initialize(layout);
         state.electromag.initialize(layout);
     }
 }
