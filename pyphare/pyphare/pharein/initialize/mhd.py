@@ -1,6 +1,6 @@
 import pybindlibs.dictator as pp
 
-from .general import add_double, add_int, add_string, fn_wrapper
+from .general import add_double, add_int, add_string, fn_wrapper, add_enum_int
 
 
 def populateDict(sim):
@@ -14,12 +14,13 @@ def populateDict(sim):
     add_double("simulation/algo/fv_method/resistivity", sim.eta)
     add_double("simulation/algo/fv_method/hyper_resistivity", sim.nu)
     add_double("simulation/algo/fv_method/heat_capacity_ratio", sim.gamma)
-    add_string("simulation/algo/fv_method/hyper_mode", sim.hyper_mode)
+    add_enum_int("simulation/algo/fv_method/hyper_mode", "HyperMode", sim.hyper_mode)
+    add_enum_int("simulation/algo/time_integrator_type", "TimeIntegratorType", sim.mhd_timestepper)
     add_double("simulation/algo/to_primitive/heat_capacity_ratio", sim.gamma)
     add_double("simulation/algo/to_conservative/heat_capacity_ratio", sim.gamma)
     add_double("simulation/algo/constrained_transport/resistivity", sim.eta)
     add_double("simulation/algo/constrained_transport/hyper_resistivity", sim.nu)
-    add_string("simulation/algo/constrained_transport/hyper_mode", sim.hyper_mode)
+    add_enum_int("simulation/algo/constrained_transport/hyper_mode", "HyperMode", sim.hyper_mode)
 
     add_string("simulation/mhd_state/name", "mhd_state")
 

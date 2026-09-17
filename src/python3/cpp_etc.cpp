@@ -4,6 +4,9 @@
 #include "core/def.hpp"
 #include "core/def/phare_config.hpp"
 #include "core/data/particles/particle_array.hpp"
+#include "core/numerics/ohm/ohm.hpp"
+
+#include "phare_simulator_options.hpp"
 
 #include "amr/samrai.hpp"             // SamraiLifeCycle without simulators
 #include "amr/wrappers/hierarchy.hpp" // for HierarchyRestarter::getRestartFileFullPath
@@ -130,6 +133,16 @@ PYBIND11_MODULE(cpp_etc, m)
         throw std::runtime_error("PHARE not built with highfive support");
     });
 
+
+    py::enum_<MHDOpts::TimeIntegratorType>(m, "TimeIntegratorType")
+        .value("euler", MHDOpts::TimeIntegratorType::Euler)
+        .value("tvdrk2", MHDOpts::TimeIntegratorType::TVDRK2)
+        .value("tvdrk3", MHDOpts::TimeIntegratorType::TVDRK3)
+        .value("ssprk4_5", MHDOpts::TimeIntegratorType::SSPRK4_5);
+
+    py::enum_<core::HyperMode>(m, "HyperMode")
+        .value("constant", core::HyperMode::constant)
+        .value("spatial", core::HyperMode::spatial);
 
     declareDim<1>(m);
     declareDim<2>(m);

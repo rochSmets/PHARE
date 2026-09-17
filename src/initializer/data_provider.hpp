@@ -6,11 +6,30 @@
 #include <vector>
 #include <optional>
 #include <functional>
+#include <type_traits>
 
 #include "core/def.hpp"
 #include "core/utilities/span.hpp"
 
 #include "dict.hpp"
+
+namespace cppdict
+{
+/**
+ * @brief reads a scoped enum stored in the dict as its underlying integer.
+ *
+ * overloads cppdict::get_value
+ */
+template<typename Enum, typename... Types>
+    requires(std::is_enum_v<Enum>)
+Enum get_value(Dict<Types...> const& dict, std::string const& path, Enum const default_value,
+               char delimiter = '/')
+{
+    return static_cast<Enum>(
+        get_value(dict, detail::split_string(path, delimiter), static_cast<int>(default_value)));
+}
+} // namespace cppdict
+
 
 namespace PHARE
 {

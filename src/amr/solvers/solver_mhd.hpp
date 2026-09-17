@@ -2,22 +2,19 @@
 #define PHARE_SOLVER_MHD_HPP
 
 
-#include "core/def.hpp"
-#include "initializer/data_provider.hpp"
-
-#include "core/errors.hpp"
-#include "core/utilities/algorithm.hpp"
-#include "core/utilities/index/index.hpp"
-#include "core/models/quantities/mhd_quantities.hpp"
-#include "core/numerics/godunov_fluxes/godunov_utils.hpp"
-
-#include "amr/solvers/solver.hpp"
 #include "amr/messengers/messenger.hpp"
-#include "amr/messengers/mhd_messenger.hpp"
 #include "amr/messengers/mhd_messenger_info.hpp"
 #include "amr/physical_models/physical_model.hpp"
+#include "amr/solvers/solver.hpp"
 #include "amr/solvers/time_integrator/euler_using_computed_flux.hpp"
 
+#include "core/errors.hpp"
+#include "core/logger.hpp"
+#include "core/models/quantities/mhd_quantities.hpp"
+#include "core/numerics/godunov_fluxes/godunov_utils.hpp"
+#include "core/utilities/index/index.hpp"
+
+#include "initializer/data_provider.hpp"
 
 #include <cmath>
 #include <tuple>
@@ -25,22 +22,22 @@
 
 namespace PHARE::solver
 {
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy,
-         typename Messenger = amr::MHDMessenger<MHDModel>>
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
 class SolverMHD : public ISolver<AMR_Types>
 {
 private:
     static constexpr auto dimension = MHDModel::dimension;
 
-    using patch_t     = typename AMR_Types::patch_t;
-    using level_t     = typename AMR_Types::level_t;
-    using hierarchy_t = typename AMR_Types::hierarchy_t;
+    using patch_t     = AMR_Types::patch_t;
+    using level_t     = AMR_Types::level_t;
+    using hierarchy_t = AMR_Types::hierarchy_t;
 
-    using FieldT      = typename MHDModel::field_type;
-    using VecFieldT   = typename MHDModel::vecfield_type;
-    using MHDStateT   = typename MHDModel::state_type;
-    using GridLayout  = typename MHDModel::gridlayout_type;
+    using FieldT      = MHDModel::field_type;
+    using VecFieldT   = MHDModel::vecfield_type;
+    using MHDStateT   = MHDModel::state_type;
+    using GridLayout  = MHDModel::gridlayout_type;
     using MHDQuantity = core::MHDQuantity;
+    using Messenger   = TimeIntegratorStrategy::Messenger;
 
     using IPhysicalModel_t = IPhysicalModel<AMR_Types>;
     using IMessenger       = amr::IMessenger<IPhysicalModel_t>;
@@ -125,12 +122,12 @@ public:
 
     NO_DISCARD auto getCompileTimeResourcesViewList()
     {
-        return std::forward_as_tuple(fluxes_, fluxSum_, fluxSumE_, stateOld_, evolve_);
+        return std::forward_as_tuple(fluxes_, fluxSum_, fluxSumE_, stateOld_);
     }
 
     NO_DISCARD auto getCompileTimeResourcesViewList() const
     {
-        return std::forward_as_tuple(fluxes_, fluxSum_, fluxSumE_, stateOld_, evolve_);
+        return std::forward_as_tuple(fluxes_, fluxSum_, fluxSumE_, stateOld_);
     }
 
 private:
@@ -139,8 +136,8 @@ private:
 
 // -----------------------------------------------------------------------------
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::registerResources(
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::registerResources(
     IPhysicalModel_t& model)
 {
     auto& mhdmodel = dynamic_cast<MHDModel&>(model);
@@ -193,8 +190,8 @@ void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::register
     evolve_.registerResources(mhdmodel);
 }
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::allocate(
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::allocate(
     IPhysicalModel_t& model, patch_t& patch, double const allocateTime) const
 
 {
@@ -248,8 +245,8 @@ void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::allocate
     evolve_.allocate(mhdmodel, patch, allocateTime);
 }
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::fillMessengerInfo(
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::fillMessengerInfo(
     std::unique_ptr<amr::IMessengerInfo> const& info) const
 
 {
@@ -280,8 +277,8 @@ void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::fillMess
     mhdInfo.ghostElectric.emplace_back(timeElectric.name());
 }
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::prepareStep(
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::prepareStep(
     IPhysicalModel_t& model, SAMRAI::hier::PatchLevel& level, double const currentTime)
 {
     PHARE_LOG_SCOPE(1, "SolverMHD::prepareStep");
@@ -313,8 +310,8 @@ void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::prepareS
 }
 
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::accumulateFluxSum(
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::accumulateFluxSum(
     IPhysicalModel_t& model, SAMRAI::hier::PatchLevel& level, double const coef)
 {
     PHARE_LOG_SCOPE(1, "SolverMHD::accumulateFluxSum");
@@ -334,8 +331,8 @@ void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::accumula
     }
 }
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::resetFluxSum(
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::resetFluxSum(
     IPhysicalModel_t& model, SAMRAI::hier::PatchLevel& level)
 {
     auto& mhdModel = dynamic_cast<MHDModel&>(model);
@@ -349,10 +346,11 @@ void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::resetFlu
 }
 
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::reflux(
-    IPhysicalModel_t& model, SAMRAI::hier::PatchLevel& level, IMessenger& messenger,
-    double const time)
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::reflux(IPhysicalModel_t& model,
+                                                                    SAMRAI::hier::PatchLevel& level,
+                                                                    IMessenger& messenger,
+                                                                    double const time)
 {
     auto& bc                          = dynamic_cast<Messenger&>(messenger);
     auto& mhdModel                    = dynamic_cast<MHDModel&>(model);
@@ -362,8 +360,8 @@ void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::reflux(
                   time - oldTime_[level.getLevelNumber()]);
 }
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::advanceLevel(
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::advanceLevel(
     hierarchy_t const& hierarchy, int const levelNumber, IPhysicalModel_t& model,
     IMessenger& fromCoarserMessenger, double const currentTime, double const newTime)
 {
@@ -388,9 +386,10 @@ void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::advanceL
         throw core::DictionaryException{}("ID", "SolverMHD::advanceLevel");
 }
 
-template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy, typename Messenger>
-void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy, Messenger>::mhdNaNCheck_(
-    MHDModel& model, level_t const& level, double time)
+template<typename MHDModel, typename AMR_Types, typename TimeIntegratorStrategy>
+void SolverMHD<MHDModel, AMR_Types, TimeIntegratorStrategy>::mhdNaNCheck_(MHDModel& model,
+                                                                          level_t const& level,
+                                                                          double time)
 {
     auto& rm  = model.resourcesManager;
     auto& rho = model.state.rho;

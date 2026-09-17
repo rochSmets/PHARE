@@ -37,7 +37,6 @@ constexpr SimOpts mhdOpts(MHDOpts::ReconstructionType reconstruction)
     return SimOpts{1,
                    0,
                    0,
-                   MHDOpts::TimeIntegratorType::TVDRK3,
                    reconstruction,
                    MHDOpts::SlopeLimiterType::None,
                    MHDOpts::RiemannSolverType::Rusanov};

@@ -43,10 +43,10 @@ template<auto opts, typename CoreTypes>
 struct HybridStack<opts, CoreTypes, true>
 {
     using GridLayout_t = CoreTypes::Hybrid::GridLayout_t;
-    using Model_t       = HybridModel<GridLayout_t, typename CoreTypes::Hybrid::Electromag_t,
-                                      typename CoreTypes::Hybrid::Ions_t,
-                                      typename CoreTypes::Hybrid::Electrons_t, amr::SAMRAI_Types,
-                                      typename CoreTypes::Hybrid::Grid_t>;
+    using Model_t
+        = HybridModel<GridLayout_t, typename CoreTypes::Hybrid::Electromag_t,
+                      typename CoreTypes::Hybrid::Ions_t, typename CoreTypes::Hybrid::Electrons_t,
+                      amr::SAMRAI_Types, typename CoreTypes::Hybrid::Grid_t>;
     using Solver_t = PHARE::solver::SolverPPC<Model_t, PHARE::amr::SAMRAI_Types>;
 
     using Splitter_t = PHARE::amr::Splitter<PHARE::core::DimConst<opts.dimension>,
@@ -70,11 +70,11 @@ template<auto opts, typename CoreTypes>
 struct MHDStack<opts, CoreTypes, true>
 {
     using GridLayout_t = CoreTypes::MHD::GridLayout_t;
-    using Model_t
-        = MHDModel<GridLayout_t, typename CoreTypes::MHD::VecField_t, amr::SAMRAI_Types,
-                  typename CoreTypes::MHD::Grid_t>;
-    using Solver_t = PHARE::solver::SolverMHD<Model_t, PHARE::amr::SAMRAI_Types,
-                                              typename MHDResolver<opts, Model_t>::MHDTimeStepper_t>;
+    using Model_t = MHDModel<GridLayout_t, typename CoreTypes::MHD::VecField_t, amr::SAMRAI_Types,
+                             typename CoreTypes::MHD::Grid_t>;
+    using Solver_t
+        = PHARE::solver::SolverMHD<Model_t, PHARE::amr::SAMRAI_Types,
+                                   typename MHDResolver<opts, Model_t>::MHDTimeStepper_t>;
 
     using LevelInitializer_t = MHDLevelInitializer<Model_t>;
 };
@@ -88,10 +88,10 @@ struct FactorySelector;
 template<auto opts, typename Hybrid, typename MHD>
 struct FactorySelector<opts, Hybrid, MHD, true, false>
 {
-    using Messenger_t = amr::MessengerFactory<
-        typename Hybrid::Model_t, typename Hybrid::Model_t,
-        amr::HybridHybridMessengerStrategy<typename Hybrid::Model_t,
-                                           typename Hybrid::RefinementParams_t>>;
+    using Messenger_t
+        = amr::MessengerFactory<typename Hybrid::Model_t, typename Hybrid::Model_t,
+                                amr::HybridHybridMessengerStrategy<
+                                    typename Hybrid::Model_t, typename Hybrid::RefinementParams_t>>;
     using LevelInit_t
         = LevelInitializerFactory<amr::SAMRAI_Types, typename Hybrid::LevelInitializer_t>;
 };
@@ -102,7 +102,8 @@ struct FactorySelector<opts, Hybrid, MHD, false, true>
 {
     using Messenger_t = amr::MessengerFactory<typename MHD::Model_t, typename MHD::Model_t,
                                               amr::MHDMessenger<typename MHD::Model_t>>;
-    using LevelInit_t = LevelInitializerFactory<amr::SAMRAI_Types, typename MHD::LevelInitializer_t>;
+    using LevelInit_t
+        = LevelInitializerFactory<amr::SAMRAI_Types, typename MHD::LevelInitializer_t>;
 };
 
 // both

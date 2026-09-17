@@ -1,6 +1,6 @@
 import pybindlibs.dictator as pp
 
-from .general import add_double, add_int, add_size_t, add_string, fn_wrapper
+from .general import add_double, add_enum_int, add_int, add_size_t, add_string, fn_wrapper
 
 
 def populateDict(sim):
@@ -14,7 +14,7 @@ def populateDict(sim):
 
     add_double("simulation/algo/ohm/resistivity", sim.resistivity)
     add_double("simulation/algo/ohm/hyper_resistivity", sim.hyper_resistivity)
-    add_string("simulation/algo/ohm/hyper_mode", sim.hyper_mode)
+    add_enum_int("simulation/algo/ohm/hyper_mode", "HyperMode", sim.hyper_mode)
 
     init_model = sim.model
     modelDict = init_model.model_dict

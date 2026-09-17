@@ -20,17 +20,17 @@ while(THIS_FILE)
     string(REPLACE "," ";" LINE_LIST ${LINE})
     list(LENGTH LINE_LIST LINE_LENGTH)
 
-    if(LINE_LENGTH EQUAL 8)
-        # MHD-only shape: dim,timeint,recon,slope,riemann,hall,res,hyper
-        # normalize to the 10-field SimOpts aggregate order: dim,0,0,timeint,...
+    if(LINE_LENGTH EQUAL 5)
+        # MHD-only shape: dim,recon,slope,riemann,hall
+        # normalize to the 7-field SimOpts aggregate order: dim,0,0,...
         list(INSERT LINE_LIST 1 "0" "0")
         list(LENGTH LINE_LIST LINE_LENGTH)
-    elseif(NOT LINE_LENGTH EQUAL 3 AND NOT LINE_LENGTH EQUAL 10)
+    elseif(NOT LINE_LENGTH EQUAL 3 AND NOT LINE_LENGTH EQUAL 7)
         message(FATAL_ERROR "PHARE permutation line has unsupported arity (${LINE_LENGTH}): ${LINE}")
     endif()
 
     SET(_OFFSET 3)
-    SET(_PREFIXES "TimeIntegratorType;ReconstructionType;SlopeLimiterType;RiemannSolverType")
+    SET(_PREFIXES "ReconstructionType;SlopeLimiterType;RiemannSolverType")
     foreach(PREFIX IN LISTS _PREFIXES)
       if(LINE_LENGTH GREATER ${_OFFSET})
           list(TRANSFORM LINE_LIST PREPEND "${PREFIX}::" AT ${_OFFSET})

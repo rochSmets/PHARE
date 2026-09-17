@@ -31,36 +31,34 @@
 3,3,6
 3,3,12
 3,3,27
-# --- MHD-only builds (dim,timestepper,reconstruction,limiter,riemann,hall,res,hyper_res) ---
+# --- MHD-only builds (dim,reconstruction,limiter,riemann,hall) ---
 # --- one line per single-run functional test ---
 # mhd_harris (higher-order, kept)
-2,TVDRK3,WENOZ,None,Rusanov,true,false,true
+2,WENOZ,None,Rusanov,true
 # mhd_harris_3d (higher-order, kept)
-3,TVDRK3,WENOZ,None,Rusanov,true,true,true
+3,WENOZ,None,Rusanov,true
 # mhd_alfven2d, mhd_rotor, mhd_orszagtang (ideal)
-2,TVDRK2,Linear,VanLeer,Rusanov,false,false,false
-# mhd_shock
-1,TVDRK2,Linear,VanLeer,Rusanov,false,false,false
+2,Linear,VanLeer,Rusanov,false
+# mhd_shock (also covers 1D convergence @ Linear)
+1,Linear,VanLeer,Rusanov,false
 # mhd_dispersion (whistler1d, Hall)
-1,TVDRK2,Linear,VanLeer,Rusanov,true,false,false
-# mhd_orszagtang_3d
-3,TVDRK2,Linear,VanLeer,Rusanov,false,false,false
-# --- mhd_convergence (1D): all reconstructions @ SSPRK4_5 ---
-1,SSPRK4_5,Constant,None,Rusanov,false,false,false
-1,SSPRK4_5,Linear,VanLeer,Rusanov,false,false,false
-1,SSPRK4_5,WENO3,None,Rusanov,false,false,false
-1,SSPRK4_5,WENOZ,None,Rusanov,false,false,false
-1,SSPRK4_5,MP5,None,Rusanov,false,false,false
-# --- mhd_multidimensional_convergence (3D): order-2 reconstructions @ SSPRK4_5 ---
-3,SSPRK4_5,Linear,VanLeer,Rusanov,false,false,false
-3,SSPRK4_5,WENO3,None,Rusanov,false,false,false
-3,SSPRK4_5,WENOZ,None,Rusanov,false,false,false
-3,SSPRK4_5,MP5,None,Rusanov,false,false,false
+1,Linear,VanLeer,Rusanov,true
+# mhd_orszagtang_3d (also covers 3D convergence @ Linear)
+3,Linear,VanLeer,Rusanov,false
+# --- mhd_convergence (1D): remaining reconstructions ---
+1,Constant,None,Rusanov,false
+1,WENO3,None,Rusanov,false
+1,WENOZ,None,Rusanov,false
+1,MP5,None,Rusanov,false
+# --- mhd_multidimensional_convergence (3D): remaining order-2 reconstructions ---
+3,WENO3,None,Rusanov,false
+3,WENOZ,None,Rusanov,false
+3,MP5,None,Rusanov,false
 # --- coverage-only: gaps not hit by any test ---
-1,Euler,Linear,MinMod,Rusanov,false,false,false
-1,Euler,Constant,None,HLL,false,false,false
-1,Euler,Constant,None,HLLD,false,false,false
-# --- coupled ("both") build (dim,interp,nbRefinedPart,timestepper,reconstruction,limiter,riemann,hall,res,hyper_res) ---
+1,Linear,MinMod,Rusanov,false
+1,Constant,None,HLL,false
+1,Constant,None,HLLD,false
+# --- coupled build (dim,interp,nbRefinedPart,reconstruction,limiter,riemann,hall) ---
 # proven by a one-timestep gate: mhd_harris/harris.py's config with interp_order/
-# refined_particle_nbr forced explicit (its own default is 8-field MHD-only)
-2,1,4,TVDRK3,WENOZ,None,Rusanov,true,false,true
+# refined_particle_nbr forced explicit (its own default is 5-field MHD-only)
+2,1,4,WENOZ,None,Rusanov,true

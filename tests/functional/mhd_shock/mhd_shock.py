@@ -43,7 +43,8 @@ def config():
             "format": "phareh5",
             "options": {"dir": diag_dir, "mode": "overwrite"},
         },
-        strict=True,        eta=0.0,
+        strict=True,
+        eta=0.0,
         nu=0.0,
         gamma=5.0 / 3.0,
         reconstruction="Linear",
@@ -51,8 +52,6 @@ def config():
         riemann="Rusanov",
         mhd_timestepper="TVDRK2",
         hall=False,
-        res=False,
-        hyper_res=False,
         model_options=["MHDModel"],
     )
 

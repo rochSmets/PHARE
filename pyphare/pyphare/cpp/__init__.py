@@ -20,16 +20,11 @@ def simulator_id(sim):
 
     if sim.mhd_timestepper:
         hall_active = "true" if sim.hall else "false"
-        res_active = "true" if sim.res else "false"
-        hyper_res_active = "true" if sim.hyper_res else "false"
         parts += [
-            sim.mhd_timestepper,
             sim.reconstruction,
             sim.limiter,
             sim.riemann,
             hall_active,
-            res_active,
-            hyper_res_active,
         ]
 
     return "_".join(parts)

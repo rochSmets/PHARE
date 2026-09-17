@@ -2,13 +2,14 @@
 #define CORE_NUMERICS_GODUNOV_GODUNOV_UTILS_HPP
 
 #include "core/data/field/field.hpp"
-#include "core/utilities/algorithm.hpp"
-#include "core/utilities/index/index.hpp"
 #include "core/data/tensorfield/tensorfield.hpp"
 #include "core/data/vecfield/vecfield_component.hpp"
 #include "core/models/quantities/mhd_quantities.hpp"
 #include "core/numerics/primite_conservative_converter/to_conservative_converter.hpp"
+#include "core/utilities/algorithm.hpp"
+#include "core/utilities/index/index.hpp"
 
+#include <array>
 #include <cassert>
 #include <cstddef>
 
@@ -324,47 +325,43 @@ struct AllFluxesNames
 template<typename VecField, typename Equations>
 class GodunovState
 {
-    using Field                            = VecField::field_type;
-    constexpr static auto dimension        = VecField::dimension;
-    constexpr static auto Resistivity      = Equations::resistivity;
-    constexpr static auto HyperResistivity = Equations::hyperResistivity;
+    using Field                     = VecField::field_type;
+    constexpr static auto dimension = VecField::dimension;
 
 public:
     GodunovState() = default;
-
-    NO_DISCARD auto getCompileTimeResourcesViewList()
+    GodunovState(bool const isResistive, bool const isHyperResistive)
     {
-        if constexpr (Resistivity || HyperResistivity)
+        // bt (transverse magnetic field for the energy ExB term) is only needed when resistivity
+        // or hyper-resistivity is active, so it is registered / allocated only then, through a
+        // runtime resource list.
+        if (isResistive || isHyperResistive)
         {
-            if constexpr (dimension == 1)
-                return std::forward_as_tuple(bt_x);
-            else if constexpr (dimension == 2)
-                return std::forward_as_tuple(bt_x, bt_y);
-            else if constexpr (dimension == 3)
-                return std::forward_as_tuple(bt_x, bt_y, bt_z);
+            static constexpr std::array names{"b_t_x", "b_t_y", "b_t_z"};
+            static constexpr std::array quantities{MHDQuantity::Vector::VecFlux_x,
+                                                   MHDQuantity::Vector::VecFlux_y,
+                                                   MHDQuantity::Vector::VecFlux_z};
+            bt_.reserve(dimension);
+            for_N<dimension>([&](auto i) { bt_.emplace_back(names[i], quantities[i]); });
         }
-        else
-            return std::forward_as_tuple();
     }
 
-    NO_DISCARD auto getCompileTimeResourcesViewList() const
+    NO_DISCARD std::vector<VecField>& getRunTimeResourcesViewList() { return bt_; }
+    NO_DISCARD std::vector<VecField> const& getRunTimeResourcesViewList() const { return bt_; }
+
+    template<auto direction>
+    auto& getBt()
     {
-        if constexpr (Resistivity || HyperResistivity)
-        {
-            if constexpr (dimension == 1)
-                return std::forward_as_tuple(bt_x);
-            else if constexpr (dimension == 2)
-                return std::forward_as_tuple(bt_x, bt_y);
-            else if constexpr (dimension == 3)
-                return std::forward_as_tuple(bt_x, bt_y, bt_z);
-        }
-        else
-            return std::forward_as_tuple();
+        if constexpr (direction == Direction::X)
+            return bt_[0];
+        else if constexpr (direction == Direction::Y)
+            return bt_[1];
+        else if constexpr (direction == Direction::Z)
+            return bt_[2];
     }
 
-    VecField bt_x{"b_t_x", MHDQuantity::Vector::VecFlux_x};
-    VecField bt_y{"b_t_y", MHDQuantity::Vector::VecFlux_y};
-    VecField bt_z{"b_t_z", MHDQuantity::Vector::VecFlux_z};
+private:
+    std::vector<VecField> bt_;
 };
 
 

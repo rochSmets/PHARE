@@ -11,6 +11,7 @@
 #include "gtest/gtest.h"
 
 #include <fstream>
+#include <variant>
 
 using namespace PHARE::core;
 
@@ -292,6 +293,36 @@ TYPED_TEST_SUITE(OhmTest, OhmTupleInfos);
 TYPED_TEST(OhmTest, ThatOhmInfoCanBeBuiltFromDict)
 {
     auto info = OhmInfo::FROM(createDict());
+}
+
+
+// asEnumConstant enumerates [0, Enum::count), which is what replaced the EnumTraits value table
+static_assert(std::is_same_v<EnumConstantVariant_t<HyperMode>,
+                             std::variant<std::integral_constant<HyperMode, HyperMode::constant>,
+                                          std::integral_constant<HyperMode, HyperMode::spatial>>>);
+
+TYPED_TEST(OhmTest, ThatAsEnumConstantLiftsEveryHyperMode)
+{
+    for (auto const mode : {HyperMode::constant, HyperMode::spatial})
+        std::visit([&](auto const tag) { EXPECT_EQ(mode, decltype(tag)::value); },
+                   asEnumConstant(mode));
+
+    EXPECT_THROW(asEnumConstant(HyperMode::count), std::runtime_error);
+}
+
+
+// hyper_mode is written to the dict as the int of the HyperMode member exposed to python by
+// cpp_etc (see pharein.initialize.add_enum_int), and read back as the enum
+TYPED_TEST(OhmTest, ThatHyperModeIsReadFromDictAsAnEnum)
+{
+    EXPECT_EQ(HyperMode::constant, OhmInfo::FROM(createDict()).hyper_mode); // absent, defaulted
+
+    auto dict          = createDict();
+    dict["hyper_mode"] = static_cast<int>(HyperMode::spatial);
+    EXPECT_EQ(HyperMode::spatial, OhmInfo::FROM(dict).hyper_mode);
+
+    dict["hyper_mode"] = static_cast<int>(HyperMode::constant);
+    EXPECT_EQ(HyperMode::constant, OhmInfo::FROM(dict).hyper_mode);
 }
 
 

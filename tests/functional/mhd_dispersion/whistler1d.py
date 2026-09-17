@@ -77,7 +77,8 @@ def config(settings):
             "options": {"dir": settings["diag_dir"], "mode": "overwrite"},
         },
         strict=True,
-        nesting_buffer=1,        eta=0.0,
+        nesting_buffer=1,
+        eta=0.0,
         nu=0.0,
         gamma=5.0 / 3.0,
         reconstruction="Linear",
@@ -85,8 +86,6 @@ def config(settings):
         riemann="Rusanov",
         mhd_timestepper="TVDRK2",
         hall=True,
-        res=False,
-        hyper_res=False,
         model_options=["MHDModel"],
     )
 

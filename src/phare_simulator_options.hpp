@@ -4,6 +4,7 @@
 #include "core/utilities/meta/meta_utilities.hpp"
 
 #include <cstddef>
+#include <cstdint>
 
 namespace PHARE
 {
@@ -15,8 +16,7 @@ namespace MHDOpts
     enum class ReconstructionType : uint8_t { MHDOff, Constant, Linear, WENO3, WENOZ, MP5, count };
     enum class SlopeLimiterType : uint8_t { MHDOff, None, VanLeer, MinMod, count };
     enum class RiemannSolverType : uint8_t { MHDOff, Rusanov, HLL, HLLD, count };
-
-}; // namespace MHDOpts
+} // namespace MHDOpts
 
 struct SimOpts
 {
@@ -25,13 +25,10 @@ struct SimOpts
 
     std::size_t nbRefinedPart = core::defaultNbrRefinedParts(dimension, interp_order);
 
-    MHDOpts::TimeIntegratorType time_integrator_type = MHDOpts::TimeIntegratorType::MHDOff;
-    MHDOpts::ReconstructionType reconstruction_type  = MHDOpts::ReconstructionType::MHDOff;
-    MHDOpts::SlopeLimiterType slope_limiter_type     = MHDOpts::SlopeLimiterType::MHDOff;
-    MHDOpts::RiemannSolverType riemann_solver_type   = MHDOpts::RiemannSolverType::MHDOff;
-    bool Hall                                        = false;
-    bool Resistivity                                 = false;
-    bool HyperResistivity                            = false;
+    MHDOpts::ReconstructionType reconstruction_type = MHDOpts::ReconstructionType::MHDOff;
+    MHDOpts::SlopeLimiterType slope_limiter_type    = MHDOpts::SlopeLimiterType::MHDOff;
+    MHDOpts::RiemannSolverType riemann_solver_type  = MHDOpts::RiemannSolverType::MHDOff;
+    bool Hall                                       = false;
 
     // derived — two independent axes, never one as the other's negation
     bool hybrid_enabled = interp_order > 0;
@@ -41,8 +38,7 @@ struct SimOpts
     constexpr bool mhd_axes_consistent() const
     {
         bool const mhd_is_off = !mhd_enabled;
-        return mhd_is_off == (time_integrator_type == MHDOpts::TimeIntegratorType::MHDOff)
-               && mhd_is_off == (slope_limiter_type == MHDOpts::SlopeLimiterType::MHDOff)
+        return mhd_is_off == (slope_limiter_type == MHDOpts::SlopeLimiterType::MHDOff)
                && mhd_is_off == (riemann_solver_type == MHDOpts::RiemannSolverType::MHDOff);
     }
 };
