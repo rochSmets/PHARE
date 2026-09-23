@@ -13,6 +13,11 @@
 namespace PHARE::core
 {
 template<typename T>
+concept std_variant
+    = requires(std::decay_t<T>& t) { []<typename... Ts>(std::variant<Ts...>&) {}(t); };
+
+
+template<typename T>
 auto ptr_or_null_for_type()
 {
     return [](T& arg) mutable -> void* { return const_cast<std::decay_t<T>*>(&arg); };
