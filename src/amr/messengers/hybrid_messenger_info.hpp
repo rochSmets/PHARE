@@ -42,6 +42,8 @@ namespace amr
         std::string modelCurrent;
         std::string modelIonBulkVelocity;
         std::string modelIonDensity;
+        std::string modelElectronPressure;
+        std::string modelElectronVelocity;
 
         // store names of vector fields that need to be initialized by refinement
         // moments are initialized by particles so only EM fields need to be init.
@@ -65,6 +67,8 @@ namespace amr
         std::vector<std::string> ghostElectric;
         std::vector<std::string> ghostCurrent;
         std::vector<std::string> ghostBulkVelocity;
+        std::vector<std::string> ghostElectronPressure;
+        std::vector<std::string> ghostElectronVelocity;
 
 
         std::vector<std::string> maxBorderFields;

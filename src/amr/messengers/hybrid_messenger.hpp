@@ -56,6 +56,7 @@ namespace amr
     private:
         using IonsT          = decltype(std::declval<HybridModel>().state.ions);
         using VecFieldT      = decltype(std::declval<HybridModel>().state.electromag.E);
+        using FieldT         = VecFieldT::field_type;
         using IPhysicalModel = typename HybridModel::Interface;
 
 
@@ -299,6 +300,35 @@ namespace amr
                                double const fillTime)
         {
             strat_->fillCurrentGhosts(J, level, fillTime);
+        }
+
+
+
+        /**
+         * @brief fillElectronPressureGhosts is called by a ISolver solving a hybrid equations to
+         * fill the ghost nodes of the electron pressure scalar field
+         * @param Pe is the electron pressure field for which ghost nodes will be filled
+         * @param level
+         * @param fillTime
+         */
+        void fillElectronPressureGhosts(FieldT& Pe, SAMRAI::hier::PatchLevel const& level,
+                                        double const fillTime)
+        {
+            strat_->fillElectronPressureGhosts(Pe, level, fillTime);
+        }
+
+
+        /**
+         * @brief fillElectronVelocityGhosts is called by a ISolver solving a hybrid equations to
+         * fill the ghost nodes of the electron bulk velocity vector field
+         * @param Ve is the electron bulk velocity field for which ghost nodes will be filled
+         * @param level
+         * @param fillTime
+         */
+        void fillElectronVelocityGhosts(VecFieldT& Ve, SAMRAI::hier::PatchLevel const& level,
+                                        double const fillTime)
+        {
+            strat_->fillElectronVelocityGhosts(Ve, level, fillTime);
         }
 
 

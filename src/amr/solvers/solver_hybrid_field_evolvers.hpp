@@ -4,6 +4,9 @@
 #include "core/numerics/ohm/ohm.hpp"
 #include "solver_field_evolvers.hpp"
 
+#include <algorithm>
+#include <iostream>
+
 namespace PHARE::solver
 {
 
@@ -35,7 +38,29 @@ public:
             auto& n     = electrons.density();
             auto& Ve    = electrons.velocity();
             auto& Pe    = electrons.pressure();
+
+            {
+                auto [nMin, nMax]   = std::minmax_element(n.begin(), n.end());
+                auto [peMin, peMax] = std::minmax_element(Pe.begin(), Pe.end());
+                auto [veMin, veMax] = std::minmax_element(Ve(core::Component::X).begin(),
+                                                          Ve(core::Component::X).end());
+                auto [bMin, bMax]   = std::minmax_element(B(core::Component::X).begin(),
+                                                          B(core::Component::X).end());
+                auto [jMin, jMax]   = std::minmax_element(J(core::Component::X).begin(),
+                                                          J(core::Component::X).end());
+                std::cerr << "DEBUG ohm inputs: n[" << *nMin << "," << *nMax << "] Pe[" << *peMin
+                          << "," << *peMax << "] Vex[" << *veMin << "," << *veMax << "] Bx["
+                          << *bMin << "," << *bMax << "] Jx[" << *jMin << "," << *jMax << "]"
+                          << std::endl;
+            }
+
             (*this)(layout, n, Ve, Pe, B, J, E);
+
+            {
+                auto [exMin, exMax] = std::minmax_element(E(core::Component::X).begin(),
+                                                          E(core::Component::X).end());
+                std::cerr << "DEBUG ohm E: Ex[" << *exMin << "," << *exMax << "]" << std::endl;
+            }
         }
     }
 

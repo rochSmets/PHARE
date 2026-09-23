@@ -156,6 +156,8 @@ void HybridModel<GridLayoutT, Electromag, Ions, Electrons, AMR_Types, Grid_t>::f
     hybridInfo.modelIonDensity      = state.ions.chargeDensityName();
     hybridInfo.modelIonBulkVelocity = state.ions.velocity().name();
     hybridInfo.modelCurrent         = state.J.name();
+    hybridInfo.modelElectronPressure = state.electrons.pressureResource().name();
+    hybridInfo.modelElectronVelocity = state.electrons.velocityResource().name();
 
     hybridInfo.initElectric.emplace_back(state.electromag.E.name());
     hybridInfo.initMagnetic.emplace_back(state.electromag.B.name());
@@ -164,6 +166,8 @@ void HybridModel<GridLayoutT, Electromag, Ions, Electrons, AMR_Types, Grid_t>::f
     hybridInfo.ghostMagnetic.push_back(hybridInfo.modelMagnetic);
     hybridInfo.ghostCurrent.push_back(state.J.name());
     hybridInfo.ghostBulkVelocity.push_back(hybridInfo.modelIonBulkVelocity);
+    hybridInfo.ghostElectronPressure.push_back(hybridInfo.modelElectronPressure);
+    hybridInfo.ghostElectronVelocity.push_back(hybridInfo.modelElectronVelocity);
 
     auto transform_ = [](auto& ions, auto& inserter) {
         std::transform(std::begin(ions), std::end(ions), std::back_inserter(inserter),

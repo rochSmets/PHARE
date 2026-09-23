@@ -234,6 +234,8 @@ namespace amr
             elecGhostsRefiners_.registerLevel(hierarchy, level);
             magGhostsRefiners_.registerLevel(hierarchy, level);
             currentGhostsRefiners_.registerLevel(hierarchy, level);
+            electronPressureGhostsRefiners_.registerLevel(hierarchy, level);
+            electronVelocityGhostsRefiners_.registerLevel(hierarchy, level);
             // chargeDensityLevelGhostsRefiners_.registerLevel(hierarchy, level);
             // velLevelGhostsRefiners_.registerLevel(hierarchy, level);
             domainGhostPartRefiners_.registerLevel(hierarchy, level);
@@ -399,6 +401,33 @@ namespace amr
             PHARE_LOG_SCOPE(3, "HybridHybridMessengerStrategy::fillCurrentGhosts");
             setNaNsOnVecfieldGhosts(J, level);
             currentGhostsRefiners_.fill(J, level.getLevelNumber(), fillTime);
+        }
+
+
+
+        /**
+         * @brief fillElectronPressureGhosts fills the ghost nodes of the electron pressure
+         * scalar field. This is needed because the electron pressure closures (e.g. polytropic)
+         * compute spatial derivatives of the (possibly derived, e.g. temperature) field right up
+         * to the domain/patch boundary, and therefore need correctly filled ghost nodes (periodic
+         * wrap and/or neighbor patch values), just like B, E and J do.
+         */
+        void fillElectronPressureGhosts(FieldT& Pe, level_t const& level,
+                                        double const fillTime) override
+        {
+            PHARE_LOG_SCOPE(3, "HybridHybridMessengerStrategy::fillElectronPressureGhosts");
+            setNaNsOnFieldGhosts(Pe, level);
+            electronPressureGhostsRefiners_.fill(Pe, level.getLevelNumber(), fillTime);
+        }
+
+
+
+        void fillElectronVelocityGhosts(VecFieldT& Ve, level_t const& level,
+                                        double const fillTime) override
+        {
+            PHARE_LOG_SCOPE(3, "HybridHybridMessengerStrategy::fillElectronVelocityGhosts");
+            setNaNsOnVecfieldGhosts(Ve, level);
+            electronVelocityGhostsRefiners_.fill(Ve, level.getLevelNumber(), fillTime);
         }
 
 
@@ -807,6 +836,14 @@ namespace amr
                                                      info->ghostCurrent,
                                                      nonOverwriteInteriorTFfillPattern);
 
+            electronPressureGhostsRefiners_.addStaticRefiners(
+                info->ghostElectronPressure, fieldRefineOp_, info->ghostElectronPressure,
+                nonOverwriteInteriorFieldFillPattern);
+
+            electronVelocityGhostsRefiners_.addStaticRefiners(
+                info->ghostElectronVelocity, vecFieldRefineOp_, info->ghostElectronVelocity,
+                nonOverwriteInteriorTFfillPattern);
+
             // chargeDensityLevelGhostsRefiners_.addTimeRefiner(
             //     info->modelIonDensity, info->modelIonDensity, NiOld_.name(), fieldRefineOp_,
             //     fieldTimeOp_, info->modelIonDensity, nonOverwriteInteriorFieldFillPattern);
@@ -1008,6 +1045,7 @@ namespace amr
         VecFieldT Jold_{stratName + "_Jold", core::HybridQuantity::Vector::J};
         VecFieldT ViOld_{stratName + "_VBulkOld", core::HybridQuantity::Vector::V};
         FieldT NiOld_{stratName + "_NiOld", core::HybridQuantity::Scalar::rho};
+        FieldT PeOld_{stratName + "_PeOld", core::HybridQuantity::Scalar::P};
 
         TensorFieldT sumTensor_{"PHARE_sumTensor", core::HybridQuantity::Tensor::M};
         VecFieldT sumVec_{"PHARE_sumVec", core::HybridQuantity::Vector::V};
@@ -1076,6 +1114,21 @@ namespace amr
         GhostRefinerPool magGhostsRefiners_{resourcesManager_};
 
         GhostRefinerPool currentGhostsRefiners_{resourcesManager_};
+
+        //! store refiners for the electron pressure scalar field, that needs its ghosts filled
+        //! every predictor/corrector substep, just like the current density. Uses a
+        //! PatchGhostRefinerPool + addTimeRefiner (with a PeOld_ shadow field), mirroring Ni,
+        //! since a bare scalar field self-filled through a GhostRefinerPool (addStaticRefiners)
+        //! corrupts its own data via a SAMRAI scheduling gap never exercised for scalar fields
+        //! before (see tests/functional/ion_acoustic_wave/NOTES.md).
+        PatchGhostRefinerPool electronPressureGhostsRefiners_{resourcesManager_};
+
+        //! store refiners for the electron bulk velocity vector field. Unlike Pe (a genuinely
+        //! time-evolving quantity that tolerates using its previous substep's ghosts), Ve is a
+        //! pure function of Vi/J/Ne recomputed fresh every substep with no dependency on its own
+        //! past state, so it is ghost-filled between being computed and being consumed within the
+        //! same substep (see SolverPPC::update_electrons_).
+        GhostRefinerPool electronVelocityGhostsRefiners_{resourcesManager_};
 
         // moment ghosts
         // The border node is already complete by the deposit of ghost particles

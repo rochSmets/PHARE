@@ -19,6 +19,7 @@
 
 
 #include <cstddef>
+#include <iostream>
 
 
 namespace PHARE::amr
@@ -108,6 +109,9 @@ public:
             = FieldGeometry::toFieldBox(srcData->getGhostBox(), qty, srcLayout);
 
         FieldRefinerPolicy refiner{destLayout.centering(qty), destFieldBox, sourceFieldBox, ratio};
+
+        std::cerr << "DEBUG FieldRefineOperator::refine CALLED for field, overlapBoxes.size()="
+                  << overlapBoxes.size() << std::endl;
 
         for (auto const& box : overlapBoxes)
         {

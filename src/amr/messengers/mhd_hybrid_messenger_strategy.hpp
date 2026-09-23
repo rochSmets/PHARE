@@ -16,6 +16,7 @@ namespace amr
     {
         using IonsT          = decltype(std::declval<HybridModel>().state.ions);
         using VecFieldT      = decltype(std::declval<HybridModel>().state.electromag.E);
+        using FieldT         = VecFieldT::field_type;
         using IPhysicalModel = typename HybridModel::Interface;
 
         using resources_manager_type = HybridModel::resources_manager_type;
@@ -95,6 +96,16 @@ namespace amr
 
         void fillCurrentGhosts(VecFieldT& /*J*/, SAMRAI::hier::PatchLevel const& /*level*/,
                                double const /*fillTime*/) override
+        {
+        }
+
+        void fillElectronPressureGhosts(FieldT& /*Pe*/, SAMRAI::hier::PatchLevel const& /*level*/,
+                                        double const /*fillTime*/) override
+        {
+        }
+
+        void fillElectronVelocityGhosts(VecFieldT& /*Ve*/, SAMRAI::hier::PatchLevel const& /*level*/,
+                                        double const /*fillTime*/) override
         {
         }
 

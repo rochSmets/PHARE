@@ -78,7 +78,7 @@ def populateDict(sim):
         for item in sim.electrons.dict_path():
             if isinstance(item[1], str):
                 add_string("simulation/" + item[0], item[1])
-            elif isinstance(item[1], float):
+            elif isinstance(item[1], (float, int)):
                 add_double("simulation/" + item[0], item[1])
             elif isinstance(item[1], Callable):
                 addInitFunction("simulation/" + item[0], fn_wrapper(item[1]))

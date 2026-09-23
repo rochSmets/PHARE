@@ -16,6 +16,8 @@
 
 #include <memory>
 #include <variant>
+#include <algorithm>
+#include <iostream>
 
 namespace PHARE::core
 {
@@ -85,6 +87,11 @@ public:
 
         return Ve_;
     }
+
+    // unlike velocity(), does not require Ve_ to already be bound/usable — safe to call outside
+    // of a per-patch resource-binding scope (see pressureResource() for the same rationale)
+    NO_DISCARD VecField& velocityResource() { return Ve_; }
+    NO_DISCARD VecField const& velocityResource() const { return Ve_; }
 
     void computeDensity() {}
 
@@ -186,6 +193,14 @@ public:
             throw std::runtime_error("Error - !! isothermal closure pressure not usable");
         return Pe_;
     }
+
+    // unlike pressure(), this does not require Pe_ to already be bound/usable, so it is safe to
+    // call outside of a per-patch resource-binding scope (e.g. from
+    // HybridModel::fillMessengerInfo() before any resource is allocated, or from the messenger's
+    // ghost-filling call sites in SolverPPC, which only need Pe_'s identity/SAMRAI registration
+    // to look up the right patch data, not its currently-bound data pointer).
+    NO_DISCARD Field& pressureResource() { return Pe_; }
+    NO_DISCARD Field const& pressureResource() const { return Pe_; }
 
     void virtual computePressure(GridLayout const& /*layout*/, double const /* dt */) = 0;
 
@@ -305,19 +320,26 @@ public:
 
         this->dt_ = dt;
 
+        {
+            auto [nMin, nMax] = std::minmax_element(N_.begin(), N_.end());
+            auto [peMin, peMax] = std::minmax_element(this->Pe_.begin(), this->Pe_.end());
+            auto [teMin, teMax] = std::minmax_element(Te.begin(), Te.end());
+            std::cerr << "DEBUG pre-T_Eq_ full-array: N[" << *nMin << "," << *nMax << "] Pe["
+                      << *peMin << "," << *peMax << "] Te[" << *teMin << "," << *teMax << "]"
+                      << " sizes N=" << (N_.end() - N_.begin())
+                      << " Pe=" << (this->Pe_.end() - this->Pe_.begin())
+                      << " Te=" << (Te.end() - Te.begin()) << std::endl;
+        }
+
         layout.evalOnBox(Te, [&](auto&... ijk) mutable { T_Eq_(layout, V_, Te, ijk...); });
 
+        {
+            auto [teMin, teMax] = std::minmax_element(Te.begin(), Te.end());
+            std::cerr << "DEBUG post-T_Eq_: Te[" << *teMin << "," << *teMax << "]" << std::endl;
+        }
 
-
-
-        // std::transform(std::begin(N_), std::end(N_), std::begin(Te), std::begin(this->Pe_),
-        //                [this](auto n, auto T) { return n * T; });
         std::transform(N_.begin(), N_.end(), Te.begin(), this->Pe_.begin(),
                        [this](auto n, auto T) { return n * T; });
-
-
-
-
     }
 
 private:
@@ -327,12 +349,15 @@ private:
     Field Te_{"Te", HybridQuantity::Scalar::P};
 
 
+    // dT/dt = -V.grad(T) - (gamma-1) T div(V), from combining mass continuity with the
+    // adiabatic invariant P/n^gamma = const (P = nT). advection_() and compression_() return
+    // the unsigned +V.grad(T) and +(gamma-1) T div(V) terms, hence the minus sign here.
     template<typename Field, typename VecField>
     void T_Eq_(GridLayout const& layout, VecField const& Ve, Field const& Te, auto&... ijk) const
     {
         Te(ijk...)
             = Te(ijk...)
-              + dt_ * (advection_(layout, Ve, Te, ijk...) + compression_(layout, Ve, Te, ijk...));
+              - dt_ * (advection_(layout, Ve, Te, ijk...) + compression_(layout, Ve, Te, ijk...));
     }
 
     template<typename Field, typename VecField>
@@ -537,11 +562,15 @@ public:
 
     NO_DISCARD Field const& density() const { return fluxComput_.density(); }
     NO_DISCARD VecField const& velocity() const { return fluxComput_.velocity(); }
+    NO_DISCARD VecField const& velocityResource() const { return fluxComput_.velocityResource(); }
     NO_DISCARD Field const& pressure() const { return pressureClosure_->pressure(); }
+    NO_DISCARD Field const& pressureResource() const { return pressureClosure_->pressureResource(); }
 
     NO_DISCARD Field& density() { return fluxComput_.density(); }
     NO_DISCARD VecField& velocity() { return fluxComput_.velocity(); }
+    NO_DISCARD VecField& velocityResource() { return fluxComput_.velocityResource(); }
     NO_DISCARD Field& pressure() { return pressureClosure_->pressure(); }
+    NO_DISCARD Field& pressureResource() { return pressureClosure_->pressureResource(); }
 
     void computeDensity() { fluxComput_.computeDensity(); }
     void computeBulkVelocity(GridLayout const& layout) { fluxComput_.computeBulkVelocity(layout); }
@@ -577,13 +606,27 @@ public:
 
     void initialize(GridLayout const& layout) { momentModel_.initialize(layout); }
 
+    // computes density and bulk velocity only. Split out from updatePressure() so that callers
+    // needing correctly ghost-filled Ve for pressure closures taking spatial derivatives of it
+    // (e.g. polytropic) can fill Ve's ghosts between the two (Ve has no dependency on its own
+    // past state, unlike Pe, so this is always safe/exact, not just "close enough").
+    void updateMoments(GridLayout const& layout)
+    {
+        momentModel_.computeDensity();
+        momentModel_.computeBulkVelocity(layout);
+    }
+
+    void updatePressure(GridLayout const& layout, auto const dt)
+    {
+        momentModel_.computePressure(layout, dt);
+    }
+
     void update(GridLayout const& layout, auto const dt)
     {
         if (isUsable())
         {
-            momentModel_.computeDensity();
-            momentModel_.computeBulkVelocity(layout);
-            momentModel_.computePressure(layout, dt);
+            updateMoments(layout);
+            updatePressure(layout, dt);
         }
         else
             throw std::runtime_error("Error - Electron  is not usable");
@@ -613,11 +656,15 @@ public:
 
     NO_DISCARD Field const& density() const { return momentModel_.density(); }
     NO_DISCARD VecField const& velocity() const { return momentModel_.velocity(); }
+    NO_DISCARD VecField const& velocityResource() const { return momentModel_.velocityResource(); }
     NO_DISCARD Field const& pressure() const { return momentModel_.pressure(); }
+    NO_DISCARD Field const& pressureResource() const { return momentModel_.pressureResource(); }
 
     NO_DISCARD Field& density() { return momentModel_.density(); }
     NO_DISCARD VecField& velocity() { return momentModel_.velocity(); }
+    NO_DISCARD VecField& velocityResource() { return momentModel_.velocityResource(); }
     NO_DISCARD Field& pressure() { return momentModel_.pressure(); }
+    NO_DISCARD Field& pressureResource() { return momentModel_.pressureResource(); }
 
 private:
     initializer::PHAREDict dict_;

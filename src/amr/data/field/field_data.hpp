@@ -14,6 +14,8 @@
 #include <SAMRAI/hier/PatchData.h>
 #include <SAMRAI/tbox/MemoryUtilities.h>
 
+#include <algorithm>
+#include <iostream>
 #include <limits>
 #include <utility>
 
@@ -131,6 +133,15 @@ namespace amr
             // Given the two boxes in correct space we just have to intersect them
             SAMRAI::hier::Box const intersectionBox = sourceBox * destinationBox;
 
+            if (field.name() == "Pe")
+            {
+                auto const& srcField = fieldSource.field;
+                auto [smin, smax]    = std::minmax_element(srcField.begin(), srcField.end());
+                std::cerr << "DEBUG FieldData::copy(no-overlap) name=" << field.name()
+                          << " src.name=" << srcField.name() << " src[" << *smin << "," << *smax
+                          << "] intersectionEmpty=" << intersectionBox.empty() << std::endl;
+            }
+
             if (!intersectionBox.empty())
             {
                 // We can copy field from the source to the destination on the correct region
@@ -167,6 +178,16 @@ namespace amr
             // casts throw on failure
             auto& fieldSource  = dynamic_cast<FieldData const&>(source);
             auto& fieldOverlap = dynamic_cast<FieldOverlap const&>(overlap);
+
+            if (field.name() == "Pe")
+            {
+                auto const& srcField = fieldSource.field;
+                auto [smin, smax]    = std::minmax_element(srcField.begin(), srcField.end());
+                auto [dmin, dmax]    = std::minmax_element(field.begin(), field.end());
+                std::cerr << "DEBUG FieldData::copy(overlap) this=" << this
+                          << " &fieldSource=" << &fieldSource << " dst[" << *dmin << "," << *dmax
+                          << "] src[" << *smin << "," << *smax << "]" << std::endl;
+            }
 
             copy_(fieldSource, fieldOverlap);
         }

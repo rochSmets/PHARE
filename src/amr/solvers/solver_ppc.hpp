@@ -19,6 +19,8 @@
 #include <SAMRAI/hier/Patch.h>
 #include "SAMRAI/hier/PatchLevel.h"
 
+#include <algorithm>
+#include <iostream>
 #include <tuple>
 #include <unordered_map>
 
@@ -172,11 +174,34 @@ private:
         return *level;
     }
 
-    void update_electrons(auto& level, auto& model, auto const dt)
+    // Ve (electron bulk velocity) is ghost-filled between the moments and pressure phases,
+    // rather than after the whole update like Pe, because pressure closures (e.g. polytropic)
+    // take spatial derivatives of Ve within this same call and Ve (unlike Pe) has no dependency
+    // on its own past state, so there is no need to tolerate a substep-stale ghost for it.
+    void update_electrons(auto& level, auto& model, Messenger& fromCoarser, double const newTime,
+                          auto const dt)
     {
         auto& rm = *model.resourcesManager;
+
         for (auto& patch : rm.enumerate(level, model.state.electrons))
-            model.state.electrons.update(amr::layoutFromPatch<GridLayout>(*patch), dt);
+            model.state.electrons.updateMoments(amr::layoutFromPatch<GridLayout>(*patch));
+
+        fromCoarser.fillElectronVelocityGhosts(model.state.electrons.velocityResource(), level,
+                                               newTime);
+
+        for (auto& patch : rm.enumerate(level, model.state.electrons))
+            model.state.electrons.updatePressure(amr::layoutFromPatch<GridLayout>(*patch), dt);
+
+        fromCoarser.fillElectronPressureGhosts(model.state.electrons.pressureResource(), level,
+                                               newTime);
+
+        for (auto& patch : rm.enumerate(level, model.state.electrons))
+        {
+            auto& Pe = model.state.electrons.pressure();
+            auto [peMin, peMax] = std::minmax_element(Pe.begin(), Pe.end());
+            std::cerr << "DEBUG post-fillElectronPressureGhosts: Pe[" << *peMin << "," << *peMax
+                      << "]" << std::endl;
+        }
     }
 
 
@@ -375,7 +400,7 @@ void SolverPPC<HybridModel, AMR_Types>::predictor1_(level_t& level, HybridModel&
     {
         PHARE_LOG_SCOPE(1, "SolverPPC::predictor1_.ohm");
         auto dt = newTime - currentTime;
-        update_electrons(level, model, dt);
+        update_electrons(level, model, fromCoarser, newTime, dt);
         ohm(electromagPred_.B, electromagPred_.E, model.state.electrons);
         setTime(electromagPred_.E);
     }
@@ -412,7 +437,7 @@ void SolverPPC<HybridModel, AMR_Types>::predictor2_(level_t& level, HybridModel&
     {
         PHARE_LOG_SCOPE(1, "SolverPPC::predictor2_.ohm");
         auto dt = newTime - currentTime;
-        update_electrons(level, model, dt);
+        update_electrons(level, model, fromCoarser, newTime, dt);
         ohm(electromagPred_.B, electromagPred_.E, model.state.electrons);
         setTime(electromagPred_.E);
     }
@@ -453,7 +478,7 @@ void SolverPPC<HybridModel, AMR_Types>::corrector_(level_t& level, HybridModel& 
     {
         PHARE_LOG_SCOPE(1, "SolverPPC::corrector_.ohm");
         auto dt = newTime - currentTime;
-        update_electrons(level, model, dt);
+        update_electrons(level, model, fromCoarser, newTime, dt);
         ohm(electromag.B, electromag.E, model.state.electrons);
         setTime(model.state.electromag.E);
 
@@ -476,6 +501,17 @@ void SolverPPC<HybridModel, AMR_Types>::average_(level_t& level, HybridModel& mo
     {
         PHARE::core::average(electromag.B, electromagPred_.B, electromagAvg_.B);
         PHARE::core::average(electromag.E, electromagPred_.E, electromagAvg_.E);
+
+        {
+            auto [exMin, exMax] = std::minmax_element(
+                electromagAvg_.E(core::Component::X).begin(),
+                electromagAvg_.E(core::Component::X).end());
+            auto [bxMin, bxMax] = std::minmax_element(
+                electromagAvg_.B(core::Component::X).begin(),
+                electromagAvg_.B(core::Component::X).end());
+            std::cerr << "DEBUG average: Ex[" << *exMin << "," << *exMax << "] Bx[" << *bxMin
+                      << "," << *bxMax << "]" << std::endl;
+        }
     }
 
     setTime(electromagAvg_.B);
