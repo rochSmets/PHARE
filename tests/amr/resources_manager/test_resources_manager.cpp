@@ -314,10 +314,15 @@ INSTANTIATE_TYPED_TEST_SUITE_P(testResourcesManager, aResourceUserCollection, My
 
 struct FieldResource
 {
+    explicit FieldResource(std::string const& name = "name")
+        : rho{name, HybridQuantity::Scalar::rho, nullptr, cells}
+    {
+    }
+
     NO_DISCARD auto getCompileTimeResourcesViewList() { return std::forward_as_tuple(rho); }
 
     std::array<std::uint32_t, 1> cells{5};
-    Field1D rho{"name", HybridQuantity::Scalar::rho, nullptr, cells};
+    Field1D rho;
 };
 struct VecFieldResource
 {
@@ -331,7 +336,12 @@ struct ResourceUser
 {
     using Resources = std::variant<FieldResource>;
 
-    ResourceUser() { resources.resize(2, FieldResource{}); }
+    // distinct names, the resources manager shares the data of resources with the same name
+    ResourceUser()
+    {
+        resources.emplace_back(FieldResource{"r0"});
+        resources.emplace_back(FieldResource{"r1"});
+    }
 
     NO_DISCARD std::vector<Resources>& getRunTimeResourcesViewList() { return resources; }
 
@@ -409,6 +419,10 @@ TEST(usingResourcesManager, test_variants)
         {
             auto dataOnPatch = resourcesManager.setOnPatch(*patch, resourceUser);
             auto&& [r0, r1]  = resourceUser.get();
+            EXPECT_EQ(r0.rho.name(), "r0");
+            EXPECT_EQ(r1.rho.name(), "r1");
+            EXPECT_NE(r0.rho.data(), r1.rho.data());
+            r0.rho.data()[4] = 1;
             r1.rho.data()[4] = 5;
 
             ++patches;
@@ -420,6 +434,7 @@ TEST(usingResourcesManager, test_variants)
         {
             auto dataOnPatch = resourcesManager.setOnPatch(*patch, resourceUser);
             auto&& [r0, r1]  = resourceUser.get();
+            EXPECT_EQ(r0.rho.data()[4], 1);
             EXPECT_EQ(r1.rho.data()[4], 5);
 
             ++checks;
